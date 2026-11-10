@@ -17,7 +17,13 @@ import {
   X,
   RefreshCw,
   Search,
-  Lock
+  Lock,
+  Eye,
+  ChevronRight,
+  LogIn,
+  Home,
+  Calendar,
+  UserCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { humanitarianApi } from '../../api/humanitarianApi';
@@ -54,6 +60,8 @@ export const HumanitarianPage = () => {
 
   // Tanto el Administrador como el Operador, Gestor y Digitalizador pueden registrar y consultar el censo:
   const canRegisterCenso = Boolean(isAuthenticated && (isMasterAdmin || isGestor || isOperador || isDigitalizador || authCanRegisterCenso));
+  // Solo Administrador, Gestor, Operador y Digitalizador pueden ver los datos sensibles (cédula y teléfono) sin efecto blur:
+  const canViewSensitiveCensoData = Boolean(isAuthenticated && (isMasterAdmin || isGestor || isOperador || isDigitalizador || authCanRegisterCenso));
   // Gestión de suministros (bodegas y kits): Administrador, Gestor y Operador
   const canManageSupplies = Boolean(isAuthenticated && (isMasterAdmin || isGestor || isOperador || authCanManageSupplies));
   const isAdmin = Boolean(isMasterAdmin || isOperador);
@@ -63,6 +71,9 @@ export const HumanitarianPage = () => {
   const [bodegas, setBodegas] = useState([]);
   const [suministros, setSuministros] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Modal / Ventanita flotante para ver detalle completo de ficha censal
+  const [selectedFamilia, setSelectedFamilia] = useState(null);
 
   // Formulario de censo familiar
   const [nuevoCenso, setNuevoCenso] = useState({
@@ -614,34 +625,85 @@ export const HumanitarianPage = () => {
                     return (
                       <div
                         key={f.id || i}
-                        className="p-3 rounded-xl bg-slate-50 dark:bg-crisis-900 border border-slate-200 dark:border-crisis-700 text-xs space-y-1.5 hover:border-sky-400 dark:hover:border-slate-500 transition shadow-sm"
+                        onClick={() => setSelectedFamilia(f)}
+                        className="p-3 rounded-xl bg-slate-50 dark:bg-crisis-900 border border-slate-200 dark:border-crisis-700 text-xs space-y-1.5 hover:border-sky-500 dark:hover:border-sky-500 hover:shadow-md transition shadow-xs cursor-pointer group"
+                        title="Haz clic para ver la ficha censal completa en la ventana flotante"
                       >
                         <div className="flex justify-between items-start font-semibold text-slate-900 dark:text-slate-100">
-                          <span className="truncate max-w-[170px]">{f.jefe_familia_nombre || 'Familia'}</span>
-                          <span className="text-[10px] text-sky-600 dark:text-sky-400 font-mono bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
+                          <div className="flex items-center gap-1.5 truncate max-w-[170px]">
+                            <span className="truncate group-hover:text-sky-600 dark:group-hover:text-sky-400 transition font-bold">
+                              {f.jefe_familia_nombre || 'Familia'}
+                            </span>
+                            <Eye className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-500 shrink-0 opacity-0 group-hover:opacity-100 transition" />
+                          </div>
+                          <span className="text-[10px] text-sky-600 dark:text-sky-400 font-mono bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20 font-semibold shrink-0">
                             {f.codigo_censo}
                           </span>
                         </div>
+
+                        {/* Cédula y Teléfono con efecto blur por privacidad para usuarios no autorizados */}
                         <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-                          <span>CI: {f.jefe_familia_cedula || 'S/N'}</span>
-                          {f.telefono_contacto && <span>Tel: {f.telefono_contacto}</span>}
+                          <span className="flex items-center gap-1">
+                            <span className="font-semibold text-slate-600 dark:text-slate-400">CI:</span>
+                            {canViewSensitiveCensoData ? (
+                              <span className="font-mono font-medium text-slate-800 dark:text-slate-200">
+                                {f.jefe_familia_cedula || 'S/N'}
+                              </span>
+                            ) : (
+                              <span 
+                                className="inline-flex items-center gap-1 font-mono bg-slate-200/80 dark:bg-crisis-800 px-1.5 py-0.2 rounded text-[10.5px] text-slate-600 dark:text-slate-300 blur-[4.5px] select-none"
+                                title="Dato privado protegido (Requiere rol: Admin, Gestor, Operador o Digitalizador)"
+                              >
+                                <Lock className="w-2.5 h-2.5 text-amber-500 inline shrink-0" />
+                                {f.jefe_familia_cedula || '0801234567'}
+                              </span>
+                            )}
+                          </span>
+
+                          {f.telefono_contacto && (
+                            <span className="flex items-center gap-1">
+                              <span className="font-semibold text-slate-600 dark:text-slate-400">Tel:</span>
+                              {canViewSensitiveCensoData ? (
+                                <span className="font-mono font-medium text-slate-800 dark:text-slate-200">
+                                  {f.telefono_contacto}
+                                </span>
+                              ) : (
+                                <span 
+                                  className="inline-flex items-center gap-1 font-mono bg-slate-200/80 dark:bg-crisis-800 px-1.5 py-0.2 rounded text-[10.5px] text-slate-600 dark:text-slate-300 blur-[4.5px] select-none"
+                                  title="Teléfono protegido por privacidad (Requiere rol autorizado)"
+                                >
+                                  <Lock className="w-2.5 h-2.5 text-amber-500 inline shrink-0" />
+                                  {f.telefono_contacto || '0991234567'}
+                                </span>
+                              )}
+                            </span>
+                          )}
                         </div>
+
                         <p className="text-[11px] text-slate-600 dark:text-slate-300">
                           📍 {f.barrio_sector || f.parroquia || 'Esmeraldas'} • {f.numero_integrantes} integrantes
                         </p>
-                        <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200 dark:border-crisis-800 text-[10px]">
-                          {(f.ninos_menores_5 > 0 || f.adultos_mayores > 0 || f.personas_discapacidad > 0) ? (
-                            <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 font-semibold border border-amber-500/30">
-                              {f.ninos_menores_5 || 0} niños • {f.adultos_mayores || 0} adultos may. • {f.personas_discapacidad || 0} disc.
-                            </span>
-                          ) : (
-                            <span className="text-slate-400">Sin vulnerabilidad reportada</span>
-                          )}
-                          {f.requiere_evacuacion_inmediata && (
-                            <span className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-700 dark:text-red-300 font-bold border border-red-500/30">
-                              Evacuar
-                            </span>
-                          )}
+
+                        <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1.5 border-t border-slate-200 dark:border-crisis-800 text-[10px]">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {(f.ninos_menores_5 > 0 || f.adultos_mayores > 0 || f.personas_discapacidad > 0) ? (
+                              <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 font-semibold border border-amber-500/30">
+                                {f.ninos_menores_5 || 0} niños • {f.adultos_mayores || 0} ad. may. • {f.personas_discapacidad || 0} disc.
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">Sin vulnerabilidad</span>
+                            )}
+                            {f.requiere_evacuacion_inmediata && (
+                              <span className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-700 dark:text-red-300 font-bold border border-red-500/30">
+                                Evacuar
+                              </span>
+                            )}
+                          </div>
+
+                          <span className="text-sky-600 dark:text-sky-400 font-semibold group-hover:underline flex items-center gap-0.5 shrink-0">
+                            <span>Ver Ficha</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </span>
                         </div>
                       </div>
                     );
@@ -1074,6 +1136,267 @@ export const HumanitarianPage = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL / VENTANA FLOTANTE: DETALLE DE FICHA CENSAL (CON PRIVACIDAD / BLUR) */}
+      {/* ========================================================================= */}
+      {selectedFamilia && (
+        <div 
+          className="fixed inset-0 z-[1500] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setSelectedFamilia(null)}
+        >
+          <div 
+            className="w-full max-w-lg bg-white dark:bg-crisis-900 border border-slate-200 dark:border-crisis-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header Modal */}
+            <div className="bg-slate-50 dark:bg-crisis-950 border-b border-slate-200 dark:border-crisis-800 p-4 sm:p-5 flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-md shrink-0">
+                  <Users className="w-5 h-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white truncate">
+                    {selectedFamilia.jefe_familia_nombre || 'Familia Damnificada'}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] font-mono font-bold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 px-1.5 py-0.2 rounded">
+                      {selectedFamilia.codigo_censo}
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      {selectedFamilia.barrio_sector || selectedFamilia.parroquia || 'Cantón Esmeraldas'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedFamilia(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-crisis-800 transition shrink-0"
+                title="Cerrar ventana"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Banner de Privacidad / Permisos */}
+            <div className="px-4 sm:px-5 pt-3">
+              {canViewSensitiveCensoData ? (
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs flex items-center justify-between">
+                  <span className="flex items-center gap-2 font-medium">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>Acceso Autorizado ({user?.rol || 'Personal COE'})</span>
+                  </span>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded">
+                    Datos en claro
+                  </span>
+                </div>
+              ) : (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
+                  <Lock className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                  <div className="flex-1">
+                    <p className="font-bold">Datos Personales Protegidos por Privacidad</p>
+                    <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300 mt-0.5">
+                      Por Ley de Protección de Datos Personales, la cédula y el número telefónico están protegidos con efecto blur. Solo los usuarios con rol de <strong>Administrador, Gestor, Operador o Digitalizador</strong> pueden visualizarlos en claro.
+                    </p>
+                    {!isAuthenticated && (
+                      <a
+                        href="/login"
+                        className="inline-flex items-center gap-1.5 mt-2 text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline"
+                      >
+                        <LogIn className="w-3.5 h-3.5" />
+                        <span>Iniciar sesión con cuenta COE para desbloquear datos</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Contenido Detallado de la Ficha */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-3.5 text-xs">
+              
+              {/* Sección 1: Identificación y Contacto */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-crisis-800/60 border border-slate-200 dark:border-crisis-700 space-y-2.5">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <UserCheck className="w-3.5 h-3.5 text-sky-500" />
+                  <span>Identificación y Contacto del Jefe de Familia</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Cédula */}
+                  <div className="bg-white dark:bg-crisis-900 p-2.5 rounded-lg border border-slate-200 dark:border-crisis-700">
+                    <span className="text-[10px] text-slate-400 block mb-0.5 font-medium">Cédula de Identidad (CI):</span>
+                    {canViewSensitiveCensoData ? (
+                      <div className="font-mono font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <span>{selectedFamilia.jefe_familia_cedula || 'S/N'}</span>
+                        <span className="text-[9px] bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 px-1 py-0.2 rounded font-sans font-semibold">
+                          Oficial
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm text-slate-500 dark:text-slate-400 blur-[4.5px] select-none bg-slate-200/80 dark:bg-crisis-800 px-2 py-0.5 rounded">
+                          {selectedFamilia.jefe_familia_cedula || '0801234567'}
+                        </span>
+                        <span className="text-[9px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
+                          <Lock className="w-2.5 h-2.5" />
+                          Protegido
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Teléfono */}
+                  <div className="bg-white dark:bg-crisis-900 p-2.5 rounded-lg border border-slate-200 dark:border-crisis-700">
+                    <span className="text-[10px] text-slate-400 block mb-0.5 font-medium">Teléfono Celular:</span>
+                    {canViewSensitiveCensoData ? (
+                      <div className="font-mono font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <span>{selectedFamilia.telefono_contacto || 'No registrado'}</span>
+                        {selectedFamilia.telefono_contacto && (
+                          <a
+                            href={`tel:${selectedFamilia.telefono_contacto}`}
+                            className="p-1 rounded bg-sky-500/10 text-sky-600 hover:bg-sky-500/20 transition"
+                            title="Llamar"
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm text-slate-500 dark:text-slate-400 blur-[4.5px] select-none bg-slate-200/80 dark:bg-crisis-800 px-2 py-0.5 rounded">
+                          {selectedFamilia.telefono_contacto || '0991234567'}
+                        </span>
+                        <span className="text-[9px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
+                          <Lock className="w-2.5 h-2.5" />
+                          Protegido
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sección 2: Ubicación Territorial */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-crisis-800/60 border border-slate-200 dark:border-crisis-700 space-y-2">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Ubicación Territorial y Sector</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">Cantón / Parroquia:</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {selectedFamilia.canton || 'Esmeraldas'} • {selectedFamilia.parroquia || '50 Casas'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">Barrio / Sector:</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {selectedFamilia.barrio_sector || 'Sector sin especificar'}
+                    </span>
+                  </div>
+                </div>
+                {selectedFamilia.direccion_referencia && (
+                  <div className="pt-1 text-[11px] text-slate-600 dark:text-slate-300">
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">Referencia: </span>
+                    {selectedFamilia.direccion_referencia}
+                  </div>
+                )}
+              </div>
+
+              {/* Sección 3: Vulnerabilidad del Hogar */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-crisis-800/60 border border-slate-200 dark:border-crisis-700 space-y-2">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Composición del Hogar e Indicadores de Vulnerabilidad</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                  <div className="bg-white dark:bg-crisis-900 p-2 rounded-lg border border-slate-200 dark:border-crisis-700">
+                    <div className="text-[10px] text-slate-400">Total Miembros</div>
+                    <div className="text-sm font-black text-sky-600 dark:text-sky-400">
+                      {selectedFamilia.numero_integrantes || 1}
+                    </div>
+                  </div>
+                  <div className="bg-white dark:bg-crisis-900 p-2 rounded-lg border border-slate-200 dark:border-crisis-700">
+                    <div className="text-[10px] text-slate-400">Niños (&lt;5 años)</div>
+                    <div className="text-sm font-black text-amber-600 dark:text-amber-400">
+                      {selectedFamilia.ninos_menores_5 || 0}
+                    </div>
+                  </div>
+                  <div className="bg-white dark:bg-crisis-900 p-2 rounded-lg border border-slate-200 dark:border-crisis-700">
+                    <div className="text-[10px] text-slate-400">Adultos Mayores</div>
+                    <div className="text-sm font-black text-purple-600 dark:text-purple-400">
+                      {selectedFamilia.adultos_mayores || 0}
+                    </div>
+                  </div>
+                  <div className="bg-white dark:bg-crisis-900 p-2 rounded-lg border border-slate-200 dark:border-crisis-700">
+                    <div className="text-[10px] text-slate-400">Discapacidad</div>
+                    <div className="text-sm font-black text-rose-600 dark:text-rose-400">
+                      {selectedFamilia.personas_discapacidad || 0}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sección 4: Daños y Estado de Evacuación */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-crisis-800/60 border border-slate-200 dark:border-crisis-700 space-y-2">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <Home className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Estado de Vivienda y Evacuación</span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`px-2 py-1 rounded-md text-[11px] font-bold border ${
+                    selectedFamilia.danos_vivienda === 'TOTAL'
+                      ? 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30'
+                      : selectedFamilia.danos_vivienda === 'PARCIAL'
+                        ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                        : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                  }`}>
+                    Daños en Vivienda: {selectedFamilia.danos_vivienda || 'PARCIAL'}
+                  </span>
+
+                  {selectedFamilia.requiere_evacuacion_inmediata ? (
+                    <span className="px-2 py-1 rounded-md text-[11px] font-black bg-red-600 text-white animate-pulse">
+                      🚨 Requiere Evacuación Inmediata
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 rounded-md text-[11px] font-semibold bg-slate-200 dark:bg-crisis-700 text-slate-700 dark:text-slate-300">
+                      Evacuación no requerida
+                    </span>
+                  )}
+                </div>
+
+                {selectedFamilia.fecha_censo && (
+                  <div className="text-[10px] text-slate-400 flex items-center gap-1 pt-1">
+                    <Calendar className="w-3 h-3 text-slate-400" />
+                    <span>Fecha de registro en padrón: {new Date(selectedFamilia.fecha_censo).toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+            {/* Footer Modal */}
+            <div className="p-3 sm:p-4 bg-slate-50 dark:bg-crisis-950 border-t border-slate-200 dark:border-crisis-800 flex items-center justify-between gap-2">
+              <span className="text-[11px] text-slate-500 font-mono">
+                Ficha #{selectedFamilia.codigo_censo}
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedFamilia(null)}
+                className="px-4 py-2 bg-slate-200 dark:bg-crisis-800 hover:bg-slate-300 dark:hover:bg-crisis-700 text-slate-800 dark:text-white font-bold text-xs rounded-xl transition"
+              >
+                Cerrar Ficha
+              </button>
+            </div>
           </div>
         </div>
       )}
