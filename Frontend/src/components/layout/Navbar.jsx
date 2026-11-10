@@ -92,23 +92,52 @@ export const Navbar = ({ onToggleSidebar, isSidebarOpen }) => {
         {/* Perfil & Auth */}
         {isAuthenticated ? (
           <div className="flex items-center space-x-2 pl-2 sm:pl-3 border-l border-slate-200 dark:border-crisis-700">
-            <div className="text-right hidden lg:block">
-              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[120px]">
+            <div className="text-right">
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[120px] hidden sm:block">
                 {user?.nombre_completo || user?.first_name || user?.username || user?.telefono || 'Usuario'}
               </p>
-              <span className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded border ${
-                (user?.rol === 'ADMINISTRADOR' || user?.username === 'admin')
-                  ? 'bg-red-100 text-red-900 border-red-300 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/30 font-black'
-                  : (user?.rol === 'GESTOR')
-                  ? 'bg-purple-100 text-purple-900 border-purple-300 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/30'
-                  : (user?.rol === 'OPERADOR' || user?.rol === 'OPERADOR_COE')
-                  ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30'
-                  : (user?.rol === 'DIGITALIZADOR')
-                  ? 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30'
-                  : 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-crisis-700 dark:text-slate-300 dark:border-crisis-600'
-              }`}>
-                {(user?.rol === 'ADMINISTRADOR' || user?.username === 'admin') ? 'ADMINISTRADOR' : (user?.rol || 'CIUDADANO')}
-              </span>
+              {(() => {
+                const r = (user?.rol || '').toUpperCase();
+                const u = (user?.username || '').toLowerCase();
+                const isAdm = r === 'ADMINISTRADOR' || r === 'ADMIN' || r === 'COE' || r.includes('ADMIN') || r.includes('COE') || u === 'admin';
+                const isGes = !isAdm && (r === 'GESTOR' || r.includes('GESTOR') || r.includes('DIRECTOR'));
+                const isOpe = !isAdm && !isGes && (r === 'OPERADOR' || r.includes('OPERADOR'));
+                const isDig = !isAdm && !isGes && !isOpe && (r === 'DIGITALIZADOR' || r.includes('DIGITAL') || r.includes('CENSO'));
+
+                if (isAdm) {
+                  return (
+                    <span className="text-[9px] uppercase font-black px-1.5 py-0.5 rounded border bg-red-100 text-red-900 border-red-300 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/30">
+                      ADMINISTRADOR
+                    </span>
+                  );
+                }
+                if (isGes) {
+                  return (
+                    <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded border bg-purple-100 text-purple-900 border-purple-300 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/30">
+                      GESTOR
+                    </span>
+                  );
+                }
+                if (isOpe) {
+                  return (
+                    <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded border bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30">
+                      OPERADOR
+                    </span>
+                  );
+                }
+                if (isDig) {
+                  return (
+                    <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded border bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30">
+                      DIGITALIZADOR
+                    </span>
+                  );
+                }
+                return (
+                  <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded border bg-slate-100 text-slate-800 border-slate-300 dark:bg-crisis-700 dark:text-slate-300 dark:border-crisis-600">
+                    {user?.rol || 'INVITADO'}
+                  </span>
+                );
+              })()}
             </div>
             <button
               onClick={logout}

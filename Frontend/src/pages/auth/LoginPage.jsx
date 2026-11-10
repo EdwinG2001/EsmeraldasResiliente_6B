@@ -31,26 +31,36 @@ export const LoginPage = () => {
           );
           const payload = JSON.parse(jsonPayload);
 
-          const roles = (payload.realm_access?.roles || []).map((r) => r.toUpperCase());
+          const realmRoles = payload.realm_access?.roles || [];
+          const clientRoles = Object.values(payload.resource_access || {}).flatMap((c) => c?.roles || []);
+          const groupRoles = (payload.groups || []).map((g) => g.replace(/^\//, ''));
+          const directRoles = Array.isArray(payload.roles) ? payload.roles : (payload.role ? [payload.role] : []);
+          const allRoles = [...realmRoles, ...clientRoles, ...groupRoles, ...directRoles].map((r) => String(r).toUpperCase());
           const preferredUsername = (payload.preferred_username || '').toLowerCase();
           
+          const matchRole = (...targets) => allRoles.some((r) => targets.some((t) => r === t || r.includes(t)));
+
           let rol = 'INVITADO';
-          if (roles.includes('ADMINISTRADOR') || roles.includes('ADMIN') || preferredUsername === 'admin') {
+          if (matchRole('ADMIN', 'COE', 'SUPERUSER') || preferredUsername === 'admin') {
             rol = 'ADMINISTRADOR';
-          } else if (roles.includes('GESTOR')) {
+          } else if (matchRole('GESTOR', 'DIRECTOR')) {
             rol = 'GESTOR';
-          } else if (roles.includes('OPERADOR')) {
+          } else if (matchRole('OPERADOR', 'OPERADOR_COE', 'OPERADOR-COE')) {
             rol = 'OPERADOR';
-          } else if (roles.includes('DIGITALIZADOR')) {
+          } else if (matchRole('DIGITALIZADOR', 'CENSADOR', 'CENSO')) {
             rol = 'DIGITALIZADOR';
-          } else if (roles.includes('CIUDADANO')) {
+          } else if (matchRole('INVITADO')) {
+            rol = 'INVITADO';
+          } else if (matchRole('CIUDADANO')) {
             rol = 'CIUDADANO';
           }
 
           const kcUser = {
             id: payload.sub,
             username: payload.preferred_username || payload.email,
-            nombre_completo: preferredUsername === 'admin' ? 'Administrador COE' : (payload.name || payload.preferred_username || 'Usuario Keycloak'),
+            nombre_completo: (rol === 'ADMINISTRADOR' || preferredUsername === 'admin') 
+              ? 'Administrador COE' 
+              : (payload.name || payload.preferred_username || `Usuario ${rol}`),
             email: payload.email,
             rol: rol,
             is_staff: rol === 'ADMINISTRADOR' || rol === 'GESTOR' || rol === 'OPERADOR',

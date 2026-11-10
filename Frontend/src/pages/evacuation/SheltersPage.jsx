@@ -144,19 +144,25 @@ function MapClickHandler({ onClickMap }) {
 }
 
 export const SheltersPage = () => {
-  const { user } = useAuth();
-  // Permisos de edición y reubicación restringidos exclusivamente al ADMINISTRADOR
+  const { user, isAdmin: authIsAdmin, isOperador: authIsOperador, canManageShelters: authCanManage } = useAuth();
+  
   const userRol = (user?.rol || user?.properties?.rol || '').toUpperCase();
   const userUsername = (user?.username || user?.properties?.username || '').toLowerCase();
-  const isAdmin = Boolean(
+
+  const matchR = (...targets) => targets.some((t) => userRol === t || userRol.includes(t));
+
+  // Permisos de edición y reubicación habilitados para Administrador y Operador del COE
+  const canManageShelters = Boolean(
     user && (
-      userRol === 'ADMINISTRADOR' || 
-      userRol === 'ADMIN' || 
+      authIsAdmin || 
+      authIsOperador || 
+      authCanManage ||
+      matchR('ADMIN', 'COE', 'SUPERUSER', 'OPERADOR') || 
       userUsername === 'admin' || 
-      user?.is_staff || 
       user?.is_superuser
     )
   );
+  const isAdmin = canManageShelters;
 
   const [albergues, setAlbergues] = useState([]);
   const [loading, setLoading] = useState(true);

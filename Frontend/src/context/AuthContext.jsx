@@ -28,8 +28,12 @@ export const AuthProvider = ({ children }) => {
     try {
       const perfilRaw = await authApi.getPerfil();
       const perfil = normalizeUser(perfilRaw);
-      setUser(perfil);
-      localStorage.setItem('usuario', JSON.stringify(perfil));
+      setUser((prev) => {
+        const merged = { ...(prev || {}), ...(perfil || {}) };
+        if (!merged.rol && prev?.rol) merged.rol = prev.rol;
+        localStorage.setItem('usuario', JSON.stringify(merged));
+        return merged;
+      });
     } catch (err) {
       console.warn('No se pudo sincronizar perfil con backend:', err);
       // No cerrar la sesión si ya tenemos el perfil autenticado en localStorage (ej. Keycloak OIDC)
@@ -87,20 +91,30 @@ export const AuthProvider = ({ children }) => {
   const userRol = (user?.rol || user?.properties?.rol || '').toUpperCase();
   const userUsername = (user?.username || user?.properties?.username || '').toLowerCase();
   
+  const matchRole = (...patterns) => {
+    return patterns.some((p) => userRol === p || userRol.includes(p));
+  };
+
   const isAdmin = Boolean(
     user && (
-      userRol === 'ADMINISTRADOR' || 
-      userRol === 'ADMIN' || 
+      matchRole('ADMIN', 'COE', 'SUPERUSER') || 
       userUsername === 'admin' || 
-      user?.is_staff || 
       user?.is_superuser
     )
   );
 
-  const isGestor = Boolean(isAdmin || userRol === 'GESTOR');
-  const isOperador = Boolean(isGestor || userRol === 'OPERADOR' || userRol === 'OPERADOR_COE');
-  const isDigitalizador = Boolean(userRol === 'DIGITALIZADOR');
-  const isInvitado = Boolean(!token || userRol === 'INVITADO' || userRol === 'CIUDADANO');
+  const isGestor = Boolean(isAdmin || matchRole('GESTOR', 'DIRECTOR'));
+  const isOperador = Boolean(isGestor || matchRole('OPERADOR'));
+  const isDigitalizador = Boolean(isAdmin || isGestor || isOperador || matchRole('DIGITALIZADOR', 'CENSO', 'CENSADOR'));
+  const isInvitado = Boolean(!token || matchRole('INVITADO', 'CIUDADANO'));
+
+  // Capacidades de gestión operacional
+  const canManageIncidents = Boolean(user && (isAdmin || isGestor || isOperador));
+  const canManageShelters = Boolean(user && (isAdmin || isOperador));
+  const canRegisterCenso = Boolean(user && (isAdmin || isGestor || isOperador || isDigitalizador));
+  const canViewCenso = Boolean(user);
+  const canManageSupplies = Boolean(user && (isAdmin || isGestor || isOperador));
+  const canEmitAlerts = Boolean(user && (isAdmin || isGestor));
 
   return (
     <AuthContext.Provider
@@ -113,6 +127,12 @@ export const AuthProvider = ({ children }) => {
         isOperador,
         isDigitalizador,
         isInvitado,
+        canManageIncidents,
+        canManageShelters,
+        canRegisterCenso,
+        canViewCenso,
+        canManageSupplies,
+        canEmitAlerts,
         userRol,
         loading,
         login,

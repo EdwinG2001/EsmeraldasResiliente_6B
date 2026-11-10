@@ -2,11 +2,32 @@ import apiClient from './client';
 
 export const humanitarianApi = {
   getCensoFamilias: async () => {
-    const res = await apiClient.get('/humanitaria/censo-familias/');
-    return res.data?.results || res.data;
+    const res = await apiClient.get('/humanitaria/censo-familias/?formato=simple');
+    const data = res.data;
+    let list = [];
+    if (Array.isArray(data)) {
+      list = data;
+    } else if (Array.isArray(data?.results)) {
+      list = data.results;
+    } else if (data?.results?.features && Array.isArray(data.results.features)) {
+      list = data.results.features.map((f) => ({
+        id: f.id || f.properties?.id,
+        latitud: f.geometry?.coordinates?.[1],
+        longitud: f.geometry?.coordinates?.[0],
+        ...(f.properties || {})
+      }));
+    } else if (data?.features && Array.isArray(data.features)) {
+      list = data.features.map((f) => ({
+        id: f.id || f.properties?.id,
+        latitud: f.geometry?.coordinates?.[1],
+        longitud: f.geometry?.coordinates?.[0],
+        ...(f.properties || {})
+      }));
+    }
+    return list;
   },
   crearCensoFamilia: async (familiaData) => {
-    const res = await apiClient.post('/humanitaria/censo-familias/', familiaData);
+    const res = await apiClient.post('/humanitaria/censo-familias/?formato=simple', familiaData);
     return res.data;
   },
   

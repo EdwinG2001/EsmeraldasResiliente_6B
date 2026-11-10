@@ -25,20 +25,38 @@ import { useAuth } from '../../context/AuthContext';
 
 export const HumanitarianPage = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isAdmin: authIsAdmin, isGestor: authIsGestor, isDigitalizador: authIsDigitalizador } = useAuth();
+  const { 
+    user, 
+    isAuthenticated, 
+    isAdmin: authIsAdmin, 
+    isGestor: authIsGestor, 
+    isOperador: authIsOperador,
+    isDigitalizador: authIsDigitalizador,
+    canRegisterCenso: authCanRegisterCenso,
+    canManageSupplies: authCanManageSupplies
+  } = useAuth();
 
   // Matriz de Roles Humanitarios y Censales
   const userRole = (user?.rol || user?.properties?.rol || '').toUpperCase();
   const userName = (user?.username || user?.properties?.username || '').toLowerCase();
   
-  const isMasterAdmin = Boolean(authIsAdmin || userRole === 'ADMINISTRADOR' || userName === 'admin' || user?.is_superuser);
-  const isGestor = Boolean(isMasterAdmin || authIsGestor || userRole === 'GESTOR');
-  const isDigitalizador = Boolean(isMasterAdmin || isGestor || authIsDigitalizador || userRole === 'DIGITALIZADOR');
+  const matchR = (...targets) => targets.some((t) => userRole === t || userRole.includes(t));
 
-  // Permisos funcionales
-  const canRegisterCenso = Boolean(isAuthenticated && isDigitalizador);
-  const canManageSupplies = Boolean(isAuthenticated && isGestor);
-  const isAdmin = isMasterAdmin;
+  const isMasterAdmin = Boolean(
+    authIsAdmin || 
+    matchR('ADMIN', 'COE', 'SUPERUSER') || 
+    userName === 'admin' || 
+    user?.is_superuser
+  );
+  const isGestor = Boolean(isMasterAdmin || authIsGestor || matchR('GESTOR', 'DIRECTOR'));
+  const isOperador = Boolean(isGestor || authIsOperador || matchR('OPERADOR'));
+  const isDigitalizador = Boolean(isMasterAdmin || isGestor || isOperador || authIsDigitalizador || matchR('DIGITALIZADOR', 'CENSO', 'CENSADOR'));
+
+  // Tanto el Administrador como el Operador, Gestor y Digitalizador pueden registrar y consultar el censo:
+  const canRegisterCenso = Boolean(isAuthenticated && (isMasterAdmin || isGestor || isOperador || isDigitalizador || authCanRegisterCenso));
+  // Gestión de suministros (bodegas y kits): Administrador, Gestor y Operador
+  const canManageSupplies = Boolean(isAuthenticated && (isMasterAdmin || isGestor || isOperador || authCanManageSupplies));
+  const isAdmin = Boolean(isMasterAdmin || isOperador);
 
   const [tab, setTab] = useState('censo'); // 'censo' | 'bodegas' | 'suministros'
   const [familias, setFamilias] = useState([]);
@@ -88,6 +106,8 @@ export const HumanitarianPage = () => {
     descripcion: ''
   });
 
+  const [censoSearch, setCensoSearch] = useState('');
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -96,9 +116,21 @@ export const HumanitarianPage = () => {
         humanitarianApi.getBodegas(),
         humanitarianApi.getSuministros(),
       ]);
-      if (fRes.status === 'fulfilled') setFamilias(fRes.value || []);
-      if (bRes.status === 'fulfilled') setBodegas(bRes.value || []);
-      if (sRes.status === 'fulfilled') setSuministros(sRes.value || []);
+      if (fRes.status === 'fulfilled') {
+        const val = fRes.value;
+        const list = Array.isArray(val) ? val : (Array.isArray(val?.results) ? val.results : (Array.isArray(val?.features) ? val.features : []));
+        setFamilias(list);
+      }
+      if (bRes.status === 'fulfilled') {
+        const val = bRes.value;
+        const list = Array.isArray(val) ? val : (Array.isArray(val?.results) ? val.results : []);
+        setBodegas(list);
+      }
+      if (sRes.status === 'fulfilled') {
+        const val = sRes.value;
+        const list = Array.isArray(val) ? val : (Array.isArray(val?.results) ? val.results : []);
+        setSuministros(list);
+      }
     } catch (err) {
       console.error('Error cargando asistencia humanitaria:', err);
     } finally {
@@ -525,33 +557,98 @@ export const HumanitarianPage = () => {
           </form>
 
           {/* Resumen Lateral de Familias Censadas */}
-          <div className="bg-crisis-800 border border-crisis-700 rounded-2xl p-5 shadow-xl space-y-4">
-            <h3 className="font-bold text-white text-sm flex items-center gap-2">
-              <Users className="w-4 h-4 text-sky-400" />
-              Padrón de Censados ({familias.length})
-            </h3>
-            <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
-              {familias.length > 0 ? (
-                familias.map((f, i) => (
-                  <div
-                    key={i}
-                    className="p-3 rounded-xl bg-crisis-900 border border-crisis-700 text-xs space-y-1 hover:border-slate-600 transition"
-                  >
-                    <div className="flex justify-between font-semibold text-slate-200">
-                      <span>{f.jefe_familia_nombre}</span>
-                      <span className="text-[10px] text-sky-400 font-mono">
-                        {f.codigo_censo}
-                      </span>
-                    </div>
-                    <p className="text-slate-400">CI: {f.jefe_familia_cedula}</p>
-                    <p className="text-[11px] text-slate-500">
-                      {f.numero_integrantes} integrantes • {f.barrio_sector}
-                    </p>
-                  </div>
-                ))
+          <div className="bg-white dark:bg-crisis-800 border border-slate-200 dark:border-crisis-700 rounded-2xl p-5 shadow-xl space-y-4">
+            <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-crisis-700 pb-3">
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                <Users className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                <span>Padrón de Censados ({familias.length})</span>
+              </h3>
+              <button
+                type="button"
+                onClick={loadData}
+                className="p-1 rounded text-slate-500 hover:text-sky-600 dark:hover:text-white transition"
+                title="Actualizar padrón"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+
+            {/* Buscador de Familias en Padrón */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={censoSearch}
+                onChange={(e) => setCensoSearch(e.target.value)}
+                placeholder="Buscar por nombre, cédula o sector..."
+                className="w-full bg-slate-50 dark:bg-crisis-900 border border-slate-300 dark:border-crisis-600 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-sky-500"
+              />
+            </div>
+
+            <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
+              {familias.filter((item) => {
+                if (!censoSearch.trim()) return true;
+                const f = item.properties ? { ...item.properties, id: item.id } : item;
+                const query = censoSearch.toLowerCase();
+                return (
+                  (f.jefe_familia_nombre || '').toLowerCase().includes(query) ||
+                  (f.jefe_familia_cedula || '').includes(query) ||
+                  (f.codigo_censo || '').toLowerCase().includes(query) ||
+                  (f.barrio_sector || '').toLowerCase().includes(query)
+                );
+              }).length > 0 ? (
+                familias
+                  .filter((item) => {
+                    if (!censoSearch.trim()) return true;
+                    const f = item.properties ? { ...item.properties, id: item.id } : item;
+                    const query = censoSearch.toLowerCase();
+                    return (
+                      (f.jefe_familia_nombre || '').toLowerCase().includes(query) ||
+                      (f.jefe_familia_cedula || '').includes(query) ||
+                      (f.codigo_censo || '').toLowerCase().includes(query) ||
+                      (f.barrio_sector || '').toLowerCase().includes(query)
+                    );
+                  })
+                  .map((item, i) => {
+                    const f = item.properties ? { ...item.properties, id: item.id } : item;
+                    return (
+                      <div
+                        key={f.id || i}
+                        className="p-3 rounded-xl bg-slate-50 dark:bg-crisis-900 border border-slate-200 dark:border-crisis-700 text-xs space-y-1.5 hover:border-sky-400 dark:hover:border-slate-500 transition shadow-sm"
+                      >
+                        <div className="flex justify-between items-start font-semibold text-slate-900 dark:text-slate-100">
+                          <span className="truncate max-w-[170px]">{f.jefe_familia_nombre || 'Familia'}</span>
+                          <span className="text-[10px] text-sky-600 dark:text-sky-400 font-mono bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
+                            {f.codigo_censo}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                          <span>CI: {f.jefe_familia_cedula || 'S/N'}</span>
+                          {f.telefono_contacto && <span>Tel: {f.telefono_contacto}</span>}
+                        </div>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                          📍 {f.barrio_sector || f.parroquia || 'Esmeraldas'} • {f.numero_integrantes} integrantes
+                        </p>
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200 dark:border-crisis-800 text-[10px]">
+                          {(f.ninos_menores_5 > 0 || f.adultos_mayores > 0 || f.personas_discapacidad > 0) ? (
+                            <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 font-semibold border border-amber-500/30">
+                              {f.ninos_menores_5 || 0} niños • {f.adultos_mayores || 0} adultos may. • {f.personas_discapacidad || 0} disc.
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">Sin vulnerabilidad reportada</span>
+                          )}
+                          {f.requiere_evacuacion_inmediata && (
+                            <span className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-700 dark:text-red-300 font-bold border border-red-500/30">
+                              Evacuar
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
               ) : (
                 <p className="text-xs text-slate-400 italic text-center py-8">
-                  No hay familias censadas registradas aún.
+                  {censoSearch ? 'No se encontraron familias que coincidan con la búsqueda.' : 'No hay familias censadas registradas aún.'}
                 </p>
               )}
             </div>

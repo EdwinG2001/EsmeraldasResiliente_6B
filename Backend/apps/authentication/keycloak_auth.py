@@ -90,28 +90,44 @@ class KeycloakOrJWTAuthentication(authentication.BaseAuthentication):
         first_name = payload.get('given_name') or ''
         last_name = payload.get('family_name') or ''
 
-        # Extraer roles del Realm de Keycloak
+        # Extraer roles del Realm de Keycloak, Resource Access, Groups y Claims directos
         realm_access = payload.get('realm_access', {})
-        kc_roles = [r.upper() for r in realm_access.get('roles', [])]
+        kc_roles = [str(r).upper() for r in realm_access.get('roles', [])]
+        for client_data in payload.get('resource_access', {}).values():
+            kc_roles.extend([str(r).upper() for r in client_data.get('roles', [])])
+        for grp in payload.get('groups', []):
+            kc_roles.append(str(grp).replace('/', '').upper())
+        if 'roles' in payload and isinstance(payload['roles'], list):
+            kc_roles.extend([str(r).upper() for r in payload['roles']])
+        if 'role' in payload:
+            kc_roles.append(str(payload['role']).upper())
+
+        def match_role(*targets):
+            return any(any(t == r or t in r for t in targets) for r in kc_roles)
 
         rol = RolUsuario.INVITADO
         is_staff = False
         is_superuser = False
 
-        if 'ADMINISTRADOR' in kc_roles or 'ADMIN' in kc_roles or username.lower() == 'admin':
+        if match_role('ADMIN', 'COE', 'SUPERUSER') or username.lower() == 'admin':
             rol = RolUsuario.ADMINISTRADOR
             is_staff = True
             is_superuser = True
-        elif 'GESTOR' in kc_roles:
+        elif match_role('GESTOR', 'DIRECTOR'):
             rol = RolUsuario.GESTOR
             is_staff = True
-        elif 'OPERADOR' in kc_roles or 'OPERADOR_COE' in kc_roles:
+        elif match_role('OPERADOR', 'OPERADOR_COE'):
             rol = RolUsuario.OPERADOR
             is_staff = True
-        elif 'DIGITALIZADOR' in kc_roles or 'CENSADOR' in kc_roles:
+        elif match_role('DIGITALIZADOR', 'CENSADOR', 'CENSO'):
             rol = RolUsuario.DIGITALIZADOR
-        elif 'CIUDADANO' in kc_roles:
+            is_staff = False
+        elif match_role('INVITADO'):
+            rol = RolUsuario.INVITADO
+            is_staff = False
+        elif match_role('CIUDADANO'):
             rol = RolUsuario.CIUDADANO
+            is_staff = False
 
         user = None
         if email:

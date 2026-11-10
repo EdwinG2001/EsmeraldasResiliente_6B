@@ -377,19 +377,33 @@ const WeatherIcon = ({ condition = '', className = 'w-5 h-5' }) => {
 };
 
 export const CrisisRoomPage = () => {
-  const { user } = useAuth();
-  // Modo de gestión restringido exclusivamente para el ADMINISTRADOR
+  const { 
+    user, 
+    isAdmin: authIsAdmin, 
+    isGestor: authIsGestor, 
+    isOperador: authIsOperador,
+    canManageShelters: authCanManageShelters,
+    canEmitAlerts: authCanEmitAlerts
+  } = useAuth();
+
   const userRol = (user?.rol || user?.properties?.rol || '').toUpperCase();
   const userUsername = (user?.username || user?.properties?.username || '').toLowerCase();
-  const isAdmin = Boolean(
+
+  const matchR = (...targets) => targets.some((t) => userRol === t || userRol.includes(t));
+
+  // Permisos de edición y reubicación en mapa habilitados para Administrador y Operador del COE
+  const canManageMapPoints = Boolean(
     user && (
-      userRol === 'ADMINISTRADOR' || 
-      userRol === 'ADMIN' || 
+      authIsAdmin || 
+      authIsOperador || 
+      authCanManageShelters ||
+      matchR('ADMIN', 'COE', 'SUPERUSER', 'OPERADOR') || 
       userUsername === 'admin' || 
-      user?.is_staff || 
       user?.is_superuser
     )
   );
+  const isAdmin = canManageMapPoints;
+  const isGestor = Boolean(authIsAdmin || authIsGestor || matchR('ADMIN', 'COE', 'GESTOR', 'DIRECTOR'));
   const [saveStatus, setSaveStatus] = useState(null);
 
   const [zonasRiesgo, setZonasRiesgo] = useState(null);
