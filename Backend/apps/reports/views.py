@@ -15,6 +15,7 @@ class ReportesListGeoJSONAPIView(generics.ListAPIView):
     """
     Retorna GeoJSON con los incidentes activos para el mapa del COE y el ciudadano.
     Soporta filtros: ?gravedad=CRITICO&estado=PENDIENTE&simulacion=false
+    Por defecto, solo publica incidentes validados (publicado_en_mapa=True).
     """
     serializer_class = ReporteIncidenteGeoSerializer
     permission_classes = [permissions.AllowAny]
@@ -24,6 +25,11 @@ class ReportesListGeoJSONAPIView(generics.ListAPIView):
         gravedad = self.request.query_params.get('gravedad')
         estado = self.request.query_params.get('estado')
         simulacion = self.request.query_params.get('simulacion')
+        incluir_no_verificados = self.request.query_params.get('todos') or self.request.query_params.get('incluir_pendientes_verificacion')
+
+        # Si no se solicita explícitamente incluir retenidos, filtrar para mostrar solo verificados
+        if not incluir_no_verificados or str(incluir_no_verificados).lower() != 'true':
+            qs = qs.filter(publicado_en_mapa=True).exclude(estado='DESCARTADO')
 
         if gravedad:
             qs = qs.filter(nivel_gravedad=gravedad.upper())
@@ -114,12 +120,18 @@ class ReportesTablaListAPIView(generics.ListAPIView):
         estado = self.request.query_params.get('estado')
         gravedad = self.request.query_params.get('gravedad')
         simulacion = self.request.query_params.get('simulacion')
+        verificacion = self.request.query_params.get('verificacion')
+        solo_retenidos = self.request.query_params.get('solo_retenidos')
         q = self.request.query_params.get('q')
 
         if estado and estado.upper() != 'TODOS':
             qs = qs.filter(estado=estado.upper())
         if gravedad and gravedad.upper() != 'TODAS':
             qs = qs.filter(nivel_gravedad=gravedad.upper())
+        if verificacion and verificacion.upper() != 'TODAS':
+            qs = qs.filter(estado_verificacion=verificacion.upper())
+        if solo_retenidos and str(solo_retenidos).lower() == 'true':
+            qs = qs.filter(publicado_en_mapa=False).exclude(estado='DESCARTADO')
         if simulacion is not None and simulacion != '':
             qs = qs.filter(es_simulacion=(simulacion.lower() == 'true'))
         if q:
@@ -155,6 +167,8 @@ class ReportesKPIsAPIView(APIView):
         atendidos = ReporteIncidente.objects.filter(estado='ATENDIDO').count()
         descartados = ReporteIncidente.objects.filter(estado='DESCARTADO').count()
         criticos = ReporteIncidente.objects.filter(nivel_gravedad='CRITICO').count()
+        por_verificar = ReporteIncidente.objects.filter(publicado_en_mapa=False).exclude(estado='DESCARTADO').count()
+        falsos_positivos = ReporteIncidente.objects.filter(estado_verificacion='FALSO_POSITIVO').count()
 
         aggs = ReporteIncidente.objects.aggregate(
             total_atrapadas=Sum('personas_atrapadas'),
@@ -168,6 +182,8 @@ class ReportesKPIsAPIView(APIView):
             'atendidos': atendidos,
             'descartados': descartados,
             'criticos': criticos,
+            'por_verificar': por_verificar,
+            'falsos_positivos': falsos_positivos,
             'personas_atrapadas': aggs.get('total_atrapadas') or 0,
             'familias_afectadas': aggs.get('total_familias') or 0,
             'tasa_resolucion': round((atendidos / total * 100), 1) if total > 0 else 0

@@ -53,6 +53,23 @@ class ReporteIncidente(models.Model):
     es_simulacion = models.BooleanField(default=False)
     sincronizado_offline = models.BooleanField(default=False)
 
+    # Verificación Anti-Falsos Positivos y Validación Desfase Offline
+    score_verosimilitud = models.IntegerField(default=70) # 0 a 100%
+    publicado_en_mapa = models.BooleanField(default=True)
+    estado_verificacion = models.CharField(
+        max_length=30,
+        choices=[
+            ('VERIFICADO_AUTO', 'Verificado Automáticamente'),
+            ('POR_VERIFICAR', 'Por Verificar por Operador COE'),
+            ('CONFIRMADO_COE', 'Confirmado Manualmente por COE'),
+            ('FALSO_POSITIVO', 'Descartado como Falso Positivo'),
+        ],
+        default='VERIFICADO_AUTO'
+    )
+    lluvia_verificada_mm = models.FloatField(default=0.0)
+    desfase_horas = models.FloatField(default=0.0)
+    motivo_verificacion = models.TextField(null=True, blank=True)
+
     fecha_incidente = models.DateTimeField()
     fecha_recepcion_servidor = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)

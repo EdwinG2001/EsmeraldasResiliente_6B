@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
+from django.utils import timezone
 from .models import ReporteIncidente, FotoIncidente
 
 class FotoIncidenteSerializer(serializers.ModelSerializer):
@@ -22,6 +23,8 @@ class ReporteIncidenteGeoSerializer(GeoFeatureModelSerializer):
             'personas_afectadas_estimadas', 'familias_en_perimetro',
             'ninos_en_riesgo', 'adultos_mayores_riesgo', 'discapacitados_riesgo', 'radio_analisis_metros',
             'estado', 'es_simulacion', 'sincronizado_offline',
+            'score_verosimilitud', 'publicado_en_mapa', 'estado_verificacion',
+            'lluvia_verificada_mm', 'desfase_horas', 'motivo_verificacion',
             'fecha_incidente', 'fecha_recepcion_servidor', 'fotos', 'usuario_nombre',
             'latitud', 'longitud'
         ]
@@ -50,6 +53,7 @@ class CrearReporteSerializer(serializers.ModelSerializer):
     lng = serializers.FloatField(write_only=True, required=False)
     nombre_informante = serializers.CharField(write_only=True, required=False, allow_blank=True)
     radio_analisis_metros = serializers.DecimalField(max_digits=6, decimal_places=2, required=False, default=25.0)
+    fecha_incidente = serializers.DateTimeField(required=False, default=timezone.now)
 
     class Meta:
         model = ReporteIncidente
@@ -59,7 +63,15 @@ class CrearReporteSerializer(serializers.ModelSerializer):
             'familias_afectadas', 'estimacion_danos_vivienda', 'es_simulacion',
             'personas_afectadas_estimadas', 'familias_en_perimetro',
             'ninos_en_riesgo', 'adultos_mayores_riesgo', 'discapacitados_riesgo', 'radio_analisis_metros',
-            'sincronizado_offline', 'fecha_incidente'
+            'sincronizado_offline', 'fecha_incidente',
+            'score_verosimilitud', 'publicado_en_mapa', 'estado_verificacion',
+            'lluvia_verificada_mm', 'desfase_horas', 'motivo_verificacion'
+        ]
+        read_only_fields = [
+            'id', 'personas_afectadas_estimadas', 'familias_en_perimetro',
+            'ninos_en_riesgo', 'adultos_mayores_riesgo', 'discapacitados_riesgo',
+            'score_verosimilitud', 'publicado_en_mapa', 'estado_verificacion',
+            'lluvia_verificada_mm', 'desfase_horas', 'motivo_verificacion'
         ]
 
     def validate(self, attrs):
@@ -127,6 +139,28 @@ class CrearReporteSerializer(serializers.ModelSerializer):
         except Exception:
             pass
 
+        # MOTOR DE VERIFICACIÓN ANTI-FALSOS POSITIVOS Y VALIDACIÓN DESFASE OFFLINE
+        try:
+            from .verification import VerificadorIncidentesService
+            verif = VerificadorIncidentesService.evaluar_incidente(
+                tipo_evento=validated_data.get('tipo_evento', ''),
+                lat=lat,
+                lon=lon,
+                fecha_incidente=validated_data.get('fecha_incidente'),
+                sincronizado_offline=validated_data.get('sincronizado_offline', False),
+                descripcion=validated_data.get('descripcion', '')
+            )
+            validated_data['score_verosimilitud'] = verif['score_verosimilitud']
+            validated_data['publicado_en_mapa'] = verif['publicado_en_mapa']
+            validated_data['estado_verificacion'] = verif['estado_verificacion']
+            validated_data['lluvia_verificada_mm'] = verif['lluvia_verificada_mm']
+            validated_data['desfase_horas'] = verif['desfase_horas']
+            validated_data['motivo_verificacion'] = verif['motivo_verificacion']
+        except Exception:
+            validated_data['score_verosimilitud'] = 65
+            validated_data['publicado_en_mapa'] = True
+            validated_data['estado_verificacion'] = 'VERIFICADO_AUTO'
+
         return super().create(validated_data)
 
 class ReporteIncidenteListSerializer(serializers.ModelSerializer):
@@ -143,6 +177,8 @@ class ReporteIncidenteListSerializer(serializers.ModelSerializer):
             'personas_afectadas_estimadas', 'familias_en_perimetro',
             'ninos_en_riesgo', 'adultos_mayores_riesgo', 'discapacitados_riesgo', 'radio_analisis_metros',
             'estado', 'es_simulacion', 'sincronizado_offline',
+            'score_verosimilitud', 'publicado_en_mapa', 'estado_verificacion',
+            'lluvia_verificada_mm', 'desfase_horas', 'motivo_verificacion',
             'fecha_incidente', 'fecha_recepcion_servidor', 'fecha_actualizacion',
             'fotos', 'usuario_nombre', 'latitud', 'longitud'
         ]
@@ -168,6 +204,11 @@ class ReporteIncidenteListSerializer(serializers.ModelSerializer):
 class ActualizarEstadoIncidenteSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReporteIncidente
-        fields = ['estado', 'nivel_gravedad', 'descripcion', 'personas_atrapadas', 'familias_afectadas']
+        fields = [
+            'estado', 'nivel_gravedad', 'descripcion', 
+            'personas_atrapadas', 'familias_afectadas',
+            'publicado_en_mapa', 'estado_verificacion', 'score_verosimilitud',
+            'motivo_verificacion'
+        ]
 
 

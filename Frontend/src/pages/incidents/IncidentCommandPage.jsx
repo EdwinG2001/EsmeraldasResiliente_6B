@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ShieldAlert, 
+  ShieldCheck,
   Activity, 
   Clock, 
   CheckCircle2, 
@@ -43,6 +44,8 @@ export const IncidentCommandPage = () => {
     atendidos: 0,
     descartados: 0,
     criticos: 0,
+    por_verificar: 0,
+    falsos_positivos: 0,
     personas_atrapadas: 0,
     familias_afectadas: 0,
     tasa_resolucion: 0
@@ -54,11 +57,13 @@ export const IncidentCommandPage = () => {
   const gravityParam = searchParams.get('gravedad') || 'TODAS';
   const categoryParam = searchParams.get('categoria') || 'TODAS';
   const originParam = searchParams.get('origen') || 'TODOS';
+  const verifParam = searchParams.get('verificacion') || 'TODAS';
 
   const [statusFilter, setStatusFilter] = useState(statusParam);
   const [gravityFilter, setGravityFilter] = useState(gravityParam);
   const [categoryFilter, setCategoryFilter] = useState(categoryParam);
   const [originFilter, setOriginFilter] = useState(originParam);
+  const [verifFilter, setVerifFilter] = useState(verifParam);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Sincronizar estado cuando cambie la URL (navegación desde el menú lateral)
@@ -67,6 +72,7 @@ export const IncidentCommandPage = () => {
     setGravityFilter(gravityParam);
     setCategoryFilter(categoryParam);
     setOriginFilter(originParam);
+    setVerifFilter(verifParam);
   }, [searchParams]);
 
   // Modal Alerta Sectorial
@@ -119,6 +125,45 @@ export const IncidentCommandPage = () => {
     }
   };
 
+  // Validar y Publicar en Mapa (Anti-Falso Positivo)
+  const handleAprobarYPublicar = async (id) => {
+    if (!canOperate) {
+      alert('Acción restringida: Se requiere rol de Operador o Gestor del COE para verificar incidentes.');
+      return;
+    }
+    try {
+      await reportsApi.actualizarEstadoReporte(id, {
+        publicado_en_mapa: true,
+        estado_verificacion: 'CONFIRMADO_COE',
+        motivo_verificacion: 'Aprobado y publicado en mapa por Operador COE.'
+      });
+      await loadData();
+    } catch (err) {
+      alert('Error publicando reporte: ' + (err.response?.data?.detail || err.message));
+    }
+  };
+
+  // Descartar reporte como Falso Positivo
+  const handleDescartarFalsoPositivo = async (id) => {
+    if (!canOperate) {
+      alert('Acción restringida: Se requiere rol de Operador o Gestor del COE.');
+      return;
+    }
+    if (window.confirm('¿Confirmas que deseas descartar este reporte como FALSO POSITIVO? Será retirado del mapa del COE.')) {
+      try {
+        await reportsApi.actualizarEstadoReporte(id, {
+          estado: 'DESCARTADO',
+          publicado_en_mapa: false,
+          estado_verificacion: 'FALSO_POSITIVO',
+          motivo_verificacion: 'Descartado manualmente por Operador COE tras verificar falta de evidencias o lluvia.'
+        });
+        await loadData();
+      } catch (err) {
+        alert('Error descartando reporte: ' + (err.response?.data?.detail || err.message));
+      }
+    }
+  };
+
   const handleDelete = async (id) => {
     if (!canManage) {
       alert('Acción restringida: Se requiere rol de Gestor o Administrador del COE para eliminar incidentes.');
@@ -143,8 +188,16 @@ export const IncidentCommandPage = () => {
     }, 2500);
   };
 
-  // Filtrado reactivo en cliente gobernado por estado, gravedad, categoría y búsqueda
+  // Filtrado reactivo en cliente gobernado por estado, gravedad, categoría, verificación y búsqueda
   const filteredList = incidentes.filter((inc) => {
+    if (verifFilter === 'POR_VERIFICAR') {
+      if (inc.publicado_en_mapa && inc.estado_verificacion !== 'POR_VERIFICAR') return false;
+    } else if (verifFilter === 'VERIFICADOS') {
+      if (!inc.publicado_en_mapa) return false;
+    } else if (verifFilter === 'FALSOS_POSITIVOS') {
+      if (inc.estado_verificacion !== 'FALSO_POSITIVO' && inc.estado !== 'DESCARTADO') return false;
+    }
+
     if (statusFilter !== 'TODOS' && inc.estado !== statusFilter) return false;
     if (gravityFilter !== 'TODAS' && inc.nivel_gravedad !== gravityFilter) return false;
 
@@ -161,16 +214,20 @@ export const IncidentCommandPage = () => {
         (inc.descripcion || '') + ' ' + 
         (inc.tipo_evento || '') + ' ' + 
         (inc.usuario_nombre || '') + ' ' +
-        (inc.estimacion_danos_vivienda || '')
+        (inc.estimacion_danos_vivienda || '') + ' ' +
+        (inc.motivo_verificacion || '')
       ).toLowerCase();
       if (!matchText.includes(searchTerm.toLowerCase())) return false;
     }
     return true;
   });
 
-  const hasActiveFilter = statusFilter !== 'TODOS' || gravityFilter !== 'TODAS' || categoryFilter !== 'TODAS' || originFilter !== 'TODOS';
+  const hasActiveFilter = statusFilter !== 'TODOS' || gravityFilter !== 'TODAS' || categoryFilter !== 'TODAS' || originFilter !== 'TODOS' || verifFilter !== 'TODAS';
 
   const getActiveFilterLabel = () => {
+    if (verifFilter === 'POR_VERIFICAR') return '⚠️ Retenidos por Verificar';
+    if (verifFilter === 'VERIFICADOS') return '✓ Solo Verificados';
+    if (verifFilter === 'FALSOS_POSITIVOS') return '❌ Falsos Positivos Descartados';
     if (statusFilter === 'PENDIENTE') return '⏳ Estado: Pendientes';
     if (statusFilter === 'EN_PROCESO') return '🔄 Estado: En Proceso';
     if (statusFilter === 'ATENDIDO') return '✅ Estado: Atendidos';
@@ -180,6 +237,35 @@ export const IncidentCommandPage = () => {
     if (originFilter === 'CIUDADANO') return '📢 Reportes Ciudadanos';
     if (originFilter === 'SIMULACION') return '🤖 Simulaciones IA COE';
     return 'Filtro Personalizado';
+  };
+
+  const getVerificacionBadge = (inc) => {
+    if (inc.estado_verificacion === 'FALSO_POSITIVO' || inc.estado === 'DESCARTADO') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase bg-red-100 text-red-950 border border-red-300 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/40 shadow-sm">
+          ❌ Falso Positivo Descartado
+        </span>
+      );
+    }
+    if (!inc.publicado_en_mapa || inc.estado_verificacion === 'POR_VERIFICAR') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase bg-amber-100 text-amber-950 border border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40 shadow-sm animate-pulse">
+          ⚠️ Por Verificar • {inc.score_verosimilitud ?? 30}% Confianza
+        </span>
+      );
+    }
+    if (inc.estado_verificacion === 'CONFIRMADO_COE') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase bg-emerald-100 text-emerald-950 border border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40 shadow-sm">
+          🛡️ Confirmado por COE
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase bg-sky-100 text-sky-950 border border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/40 shadow-sm">
+        ✓ Verificado Auto • {inc.score_verosimilitud ?? 70}% Confianza
+      </span>
+    );
   };
 
   const getGravedadBadge = (gravedad) => {
@@ -330,11 +416,11 @@ export const IncidentCommandPage = () => {
       )}
 
       {/* CENTRO DE CONTROL SIMPLIFICADO A SOLO WIDGETS INTERACTIVOS */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-3.5">
         {/* Total */}
         <div
           onClick={() => setSearchParams({})}
-          className={`bg-white dark:bg-crisis-800 border-2 rounded-xl p-4 shadow-sm space-y-1.5 cursor-pointer transition hover:scale-[1.02] active:scale-[0.98] ${
+          className={`bg-white dark:bg-crisis-800 border-2 rounded-xl p-3.5 sm:p-4 shadow-sm space-y-1.5 cursor-pointer transition hover:scale-[1.02] active:scale-[0.98] ${
             !hasActiveFilter
               ? 'border-sky-500 ring-2 ring-sky-400/40 bg-sky-50/60 dark:bg-sky-500/10'
               : 'border-slate-200 dark:border-crisis-700 hover:border-slate-400 dark:hover:border-slate-500'
@@ -342,17 +428,35 @@ export const IncidentCommandPage = () => {
           title="Ver todos los incidentes"
         >
           <div className="flex items-center justify-between text-xs text-slate-800 dark:text-slate-300 font-bold uppercase tracking-wider">
-            <span>Total Incidentes</span>
+            <span>Total</span>
             <Activity className="w-4 h-4 text-sky-600 dark:text-sky-400" />
           </div>
           <p className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white">{kpis.total || 0}</p>
           <span className="text-[11px] text-slate-700 dark:text-slate-300 font-semibold block">100% registros</span>
         </div>
 
+        {/* Por Verificar (Anti-Falsos Positivos) */}
+        <div
+          onClick={() => setSearchParams({ verificacion: 'POR_VERIFICAR' })}
+          className={`bg-white dark:bg-crisis-800 border-2 rounded-xl p-3.5 sm:p-4 shadow-sm space-y-1.5 cursor-pointer transition hover:scale-[1.02] active:scale-[0.98] ${
+            verifFilter === 'POR_VERIFICAR'
+              ? 'border-amber-500 ring-2 ring-amber-400/40 bg-amber-50/60 dark:bg-amber-500/10'
+              : 'border-amber-200 dark:border-amber-500/30 hover:border-amber-400'
+          }`}
+          title="Filtrar incidentes retenidos por falta de lluvia o sincronización offline diferida"
+        >
+          <div className="flex items-center justify-between text-xs text-amber-900 dark:text-amber-400 font-bold uppercase tracking-wider">
+            <span>Por Verificar</span>
+            <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 animate-pulse" />
+          </div>
+          <p className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400">{kpis.por_verificar || 0}</p>
+          <span className="text-[11px] text-amber-950 dark:text-amber-300 font-bold block">Filtro Anti-Falso</span>
+        </div>
+
         {/* Pendientes */}
         <div
           onClick={() => setSearchParams({ estado: 'PENDIENTE' })}
-          className={`bg-white dark:bg-crisis-800 border-2 rounded-xl p-4 shadow-sm space-y-1.5 cursor-pointer transition hover:scale-[1.02] active:scale-[0.98] ${
+          className={`bg-white dark:bg-crisis-800 border-2 rounded-xl p-3.5 sm:p-4 shadow-sm space-y-1.5 cursor-pointer transition hover:scale-[1.02] active:scale-[0.98] ${
             statusFilter === 'PENDIENTE'
               ? 'border-amber-500 ring-2 ring-amber-400/40 bg-amber-50/60 dark:bg-amber-500/10'
               : 'border-amber-200 dark:border-amber-500/30 hover:border-amber-400'
@@ -370,7 +474,7 @@ export const IncidentCommandPage = () => {
         {/* En Proceso */}
         <div
           onClick={() => setSearchParams({ estado: 'EN_PROCESO' })}
-          className={`bg-white dark:bg-crisis-800 border-2 rounded-xl p-4 shadow-sm space-y-1.5 cursor-pointer transition hover:scale-[1.02] active:scale-[0.98] ${
+          className={`bg-white dark:bg-crisis-800 border-2 rounded-xl p-3.5 sm:p-4 shadow-sm space-y-1.5 cursor-pointer transition hover:scale-[1.02] active:scale-[0.98] ${
             statusFilter === 'EN_PROCESO'
               ? 'border-sky-500 ring-2 ring-sky-400/40 bg-sky-50/60 dark:bg-sky-500/10'
               : 'border-sky-200 dark:border-sky-500/30 hover:border-sky-400'
@@ -388,7 +492,7 @@ export const IncidentCommandPage = () => {
         {/* Atendidos */}
         <div
           onClick={() => setSearchParams({ estado: 'ATENDIDO' })}
-          className={`bg-white dark:bg-crisis-800 border-2 rounded-xl p-4 shadow-sm space-y-1.5 cursor-pointer transition hover:scale-[1.02] active:scale-[0.98] ${
+          className={`bg-white dark:bg-crisis-800 border-2 rounded-xl p-3.5 sm:p-4 shadow-sm space-y-1.5 cursor-pointer transition hover:scale-[1.02] active:scale-[0.98] ${
             statusFilter === 'ATENDIDO'
               ? 'border-emerald-500 ring-2 ring-emerald-400/40 bg-emerald-50/60 dark:bg-emerald-500/10'
               : 'border-emerald-200 dark:border-emerald-500/30 hover:border-emerald-400'
@@ -406,7 +510,7 @@ export const IncidentCommandPage = () => {
         {/* Críticos */}
         <div
           onClick={() => setSearchParams({ gravedad: 'CRITICO' })}
-          className={`bg-white dark:bg-crisis-800 border-2 rounded-xl p-4 shadow-sm space-y-1.5 cursor-pointer transition hover:scale-[1.02] active:scale-[0.98] ${
+          className={`bg-white dark:bg-crisis-800 border-2 rounded-xl p-3.5 sm:p-4 shadow-sm space-y-1.5 cursor-pointer transition hover:scale-[1.02] active:scale-[0.98] ${
             gravityFilter === 'CRITICO'
               ? 'border-red-500 ring-2 ring-red-400/40 bg-red-50/60 dark:bg-red-500/10'
               : 'border-red-200 dark:border-red-500/30 hover:border-red-400'
@@ -423,16 +527,16 @@ export const IncidentCommandPage = () => {
 
         {/* Población en Riesgo */}
         <div
-          className="bg-white dark:bg-crisis-800 border-2 border-purple-200 dark:border-purple-500/30 rounded-xl p-4 shadow-sm space-y-1.5"
+          className="bg-white dark:bg-crisis-800 border-2 border-purple-200 dark:border-purple-500/30 rounded-xl p-3.5 sm:p-4 shadow-sm space-y-1.5"
         >
           <div className="flex items-center justify-between text-xs text-purple-900 dark:text-purple-400 font-bold uppercase tracking-wider">
-            <span>Población en Riesgo</span>
+            <span>Población</span>
             <Users className="w-4 h-4 text-purple-600 dark:text-purple-400" />
           </div>
           <p className="text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-400">
-            {kpis.personas_atrapadas || 0} <span className="text-xs font-semibold text-purple-900 dark:text-purple-300">atrapadas</span>
+            {kpis.personas_atrapadas || 0}
           </p>
-          <span className="text-[11px] text-purple-950 dark:text-purple-300 font-bold block">{kpis.familias_afectadas || 0} familias afectadas</span>
+          <span className="text-[11px] text-purple-950 dark:text-purple-300 font-bold block truncate">{kpis.familias_afectadas || 0} fam. afectadas</span>
         </div>
       </div>
 
@@ -509,6 +613,7 @@ export const IncidentCommandPage = () => {
                 <div className="flex flex-wrap items-center gap-2">
                   {getEstadoBadge(inc.estado)}
                   {getGravedadBadge(inc.nivel_gravedad)}
+                  {getVerificacionBadge(inc)}
 
                   {inc.es_simulacion ? (
                     <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase bg-purple-100 text-purple-950 border border-purple-300 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/40 shadow-sm">
@@ -516,7 +621,7 @@ export const IncidentCommandPage = () => {
                     </span>
                   ) : (
                     <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase bg-sky-100 text-sky-950 border border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/40 shadow-sm">
-                      📢 Reporte Ciudadano Verificado
+                      📢 Reporte Ciudadano
                     </span>
                   )}
 
@@ -546,6 +651,103 @@ export const IncidentCommandPage = () => {
                       <strong>Daños reportados:</strong> {inc.estimacion_danos_vivienda}
                     </div>
                   )}
+
+                  {/* Panel de Auditoría Anti-Falso Positivo & Coherencia Hidrometeorológica */}
+                  <div className={`p-3 rounded-xl border text-xs space-y-2 mt-2 transition ${
+                    !inc.publicado_en_mapa || inc.estado_verificacion === 'POR_VERIFICAR'
+                      ? 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700/50'
+                      : inc.estado_verificacion === 'FALSO_POSITIVO'
+                      ? 'bg-red-50/70 dark:bg-red-950/20 border-red-300 dark:border-red-700/50'
+                      : 'bg-slate-50 dark:bg-crisis-900/60 border-slate-200 dark:border-crisis-700/60'
+                  }`}>
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 pb-1 border-b border-slate-200/80 dark:border-crisis-700/60">
+                      <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200 text-xs">
+                        {inc.estado_verificacion === 'FALSO_POSITIVO' ? (
+                          <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                        ) : !inc.publicado_en_mapa ? (
+                          <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 animate-pulse" />
+                        ) : (
+                          <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        )}
+                        <span>Auditoría de Verosimilitud & Coherencia Satelital</span>
+                      </div>
+                      
+                      {inc.publicado_en_mapa ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-100 text-emerald-900 border border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40">
+                          🟢 Visible en Mapa Ciudadano
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40 animate-pulse">
+                          🔴 Retenido (Oculto del Mapa hasta revisión COE)
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
+                      {/* Score Verosimilitud */}
+                      <div className="bg-white/80 dark:bg-crisis-800/80 p-2 rounded-lg border border-slate-200 dark:border-crisis-700">
+                        <div className="flex items-center justify-between font-bold text-slate-600 dark:text-slate-400">
+                          <span>Verosimilitud IA:</span>
+                          <span className={`font-black text-xs ${
+                            (inc.score_verosimilitud ?? 70) >= 70
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : (inc.score_verosimilitud ?? 70) >= 40
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : 'text-red-600 dark:text-red-400'
+                          }`}>
+                            {inc.score_verosimilitud ?? 70}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-200 dark:bg-crisis-700 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all ${
+                              (inc.score_verosimilitud ?? 70) >= 70
+                                ? 'bg-emerald-500'
+                                : (inc.score_verosimilitud ?? 70) >= 40
+                                ? 'bg-amber-500'
+                                : 'bg-red-500'
+                            }`}
+                            style={{ width: `${Math.min(100, Math.max(5, inc.score_verosimilitud ?? 70))}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Lluvia Histórica Open-Meteo */}
+                      <div className="bg-white/80 dark:bg-crisis-800/80 p-2 rounded-lg border border-slate-200 dark:border-crisis-700">
+                        <span className="block font-bold text-slate-600 dark:text-slate-400">Lluvia Satelital (±1h):</span>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Droplets className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                          <span className="font-extrabold text-slate-900 dark:text-white">
+                            {Number(inc.lluvia_verificada_mm || 0).toFixed(1)} mm/h
+                          </span>
+                          <span className="text-[10px] text-slate-500">(Open-Meteo)</span>
+                        </div>
+                      </div>
+
+                      {/* Desfase Temporal / Modo Offline */}
+                      <div className="bg-white/80 dark:bg-crisis-800/80 p-2 rounded-lg border border-slate-200 dark:border-crisis-700">
+                        <span className="block font-bold text-slate-600 dark:text-slate-400">Desfase Recepción:</span>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                          <span className="font-extrabold text-slate-900 dark:text-white">
+                            {Number(inc.desfase_horas || 0) < 0.1 ? 'Tiempo real' : `${Number(inc.desfase_horas || 0).toFixed(1)} h desfase`}
+                          </span>
+                          {Number(inc.desfase_horas || 0) >= 1.5 && (
+                            <span className="text-[9px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/60 px-1 rounded">
+                              Offline
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {inc.motivo_verificacion && (
+                      <div className="text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-white/90 dark:bg-crisis-800/90 p-2 rounded-lg border border-slate-200 dark:border-crisis-700 mt-1">
+                        <span className="font-black text-slate-900 dark:text-white">Diagnóstico Verificador: </span>
+                        {inc.motivo_verificacion}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Métricas del Incidente: Alto Contraste */}
@@ -598,6 +800,41 @@ export const IncidentCommandPage = () => {
 
                 {/* Botones de Cambio de Estado con Alto Contraste (Operador / Gestor / Admin) */}
                 <div className="flex flex-wrap items-center justify-end gap-2">
+                  {/* Acciones de Validación Anti-Falsos Positivos */}
+                  {(!inc.publicado_en_mapa || inc.estado_verificacion === 'POR_VERIFICAR') && (
+                    <button
+                      onClick={() => handleAprobarYPublicar(inc.id)}
+                      disabled={!canOperate}
+                      className={`px-3 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-1.5 shadow ${
+                        canOperate
+                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95 cursor-pointer'
+                          : 'bg-slate-200 dark:bg-crisis-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-crisis-600 opacity-60'
+                      }`}
+                      title={canOperate ? 'Aprobar reporte retenido y publicarlo en el mapa en vivo' : 'Acción restringida: Requiere cuenta Operador o Gestor del COE'}
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>Aprobar y Publicar</span>
+                      {!canOperate && <Lock className="w-3 h-3 ml-0.5 text-slate-400" />}
+                    </button>
+                  )}
+
+                  {inc.estado_verificacion !== 'FALSO_POSITIVO' && inc.estado !== 'DESCARTADO' && (
+                    <button
+                      onClick={() => handleDescartarFalsoPositivo(inc.id)}
+                      disabled={!canOperate}
+                      className={`px-3 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-1 border ${
+                        canOperate
+                          ? 'bg-red-50 hover:bg-red-100 text-red-700 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800/60 dark:hover:bg-red-900/50 cursor-pointer shadow-sm'
+                          : 'bg-slate-100 dark:bg-crisis-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-crisis-700 cursor-not-allowed opacity-60'
+                      }`}
+                      title={canOperate ? 'Marcar como falso positivo (descartar y ocultar del mapa)' : 'Acción restringida: Requiere cuenta Operador o Gestor del COE'}
+                    >
+                      <XCircle className="w-3.5 h-3.5 text-red-500" />
+                      <span>Falso Positivo</span>
+                      {!canOperate && <Lock className="w-3 h-3 ml-0.5 text-slate-400" />}
+                    </button>
+                  )}
+
                   {inc.estado === 'PENDIENTE' && (
                     <button
                       onClick={() => handleUpdateStatus(inc.id, 'EN_PROCESO')}
