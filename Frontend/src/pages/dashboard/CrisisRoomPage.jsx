@@ -39,7 +39,9 @@ import {
   AlertOctagon,
   Eye,
   Radio,
-  ExternalLink
+  ExternalLink,
+  Phone,
+  UserCheck
 } from 'lucide-react';
 import { gisApi } from '../../api/gisApi';
 import { weatherApi } from '../../api/weatherApi';
@@ -1339,6 +1341,32 @@ export const CrisisRoomPage = () => {
                           Cupos disponibles: <strong className="text-emerald-600 dark:text-emerald-400">{Math.max(0, p.capacidad_maxima - p.ocupacion_actual)} personas</strong>
                         </p>
                       </div>
+
+                      {/* Contacto y Encargado del Albergue */}
+                      {(p.telefono_contacto || p.contacto_responsable) && (
+                        <div className="pt-1.5 border-t border-slate-200 dark:border-slate-700/60 space-y-1 text-[10px]">
+                          {p.contacto_responsable && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                <UserCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                <span>Encargado:</span>
+                              </span>
+                              <span className="font-bold text-slate-800 dark:text-slate-200">{p.contacto_responsable}</span>
+                            </div>
+                          )}
+                          {p.telefono_contacto && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                <Phone className="w-3 h-3 text-sky-600 dark:text-sky-400" />
+                                <span>Teléfono:</span>
+                              </span>
+                              <a href={`tel:${p.telefono_contacto}`} className="font-bold text-sky-600 dark:text-sky-400 hover:underline">
+                                {p.telefono_contacto}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       {isAdmin && (
                         <div className="pt-1.5 border-t border-slate-200 dark:border-slate-700/60 text-[10px] text-sky-700 dark:text-sky-300 flex items-center gap-1 font-semibold">
                           <span>✋ Arrastra este albergue en el mapa para corregir su posición en tierra firme.</span>
@@ -1380,31 +1408,88 @@ export const CrisisRoomPage = () => {
                   }}
                 >
                   <Popup>
-                    <div className="text-xs space-y-1.5 min-w-[200px] p-1 text-slate-800 dark:text-slate-200">
-                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700/80 pb-1">
-                        <span className={`font-bold uppercase tracking-wider text-[10px] flex items-center gap-1 ${
-                          (p.tipo || '').toUpperCase().includes('BOMBERO')
+                    <div className="text-xs space-y-2 min-w-[240px] max-w-[280px] p-1 text-slate-800 dark:text-slate-200">
+                      {/* Cabecera Tipo y Badge Admin */}
+                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700/80 pb-1.5">
+                        <span className={`font-black uppercase tracking-wider text-[10px] flex items-center gap-1.5 ${
+                          isBombero
                             ? 'text-amber-600 dark:text-amber-400'
                             : 'text-red-600 dark:text-red-400'
                         }`}>
-                          {(p.tipo || '').toUpperCase().includes('BOMBERO') ? '🚒 CUERPO DE BOMBEROS' : '🏥 HOSPITAL / CENTRO MÉDICO'}
+                          {isBombero ? '🚒 CUERPO DE BOMBEROS' : '🏥 HOSPITAL / CENTRO MÉDICO'}
                         </span>
                         {isAdmin && (
-                          <span className="text-[9px] bg-sky-100 text-sky-800 border border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/40 px-1.5 py-0.5 rounded font-extrabold">
+                          <span className="text-[9px] bg-sky-100 text-sky-800 border border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/40 px-1.5 py-0.5 rounded font-black">
                             ADMIN (Arrastrable)
                           </span>
                         )}
                       </div>
-                      <p className="font-bold text-slate-900 dark:text-white text-sm">{p.nombre}</p>
-                      <p className="text-slate-600 dark:text-slate-300 text-[11px]">{p.direccion || 'Esmeraldas'}</p>
-                      <p className="text-slate-500 dark:text-slate-400 font-mono text-[10px]">
-                        GPS: {coords[1].toFixed(5)}, {coords[0].toFixed(5)}
-                      </p>
-                      {p.telefono_contacto && (
-                        <p className="text-slate-600 dark:text-slate-400 text-[10px] pt-1">
-                          Contacto: <span className="text-sky-700 dark:text-sky-300 font-medium">{p.telefono_contacto}</span>
+
+                      {/* Nombre y Dirección */}
+                      <div>
+                        <h4 className="font-extrabold text-slate-900 dark:text-white text-sm leading-snug">{p.nombre}</h4>
+                        <p className="text-slate-600 dark:text-slate-300 text-[11px] mt-0.5 flex items-start gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                          <span>{p.direccion || 'Cantón Esmeraldas'}</span>
                         </p>
-                      )}
+                        <p className="text-slate-500 dark:text-slate-400 font-mono text-[10px] mt-0.5 pl-4">
+                          GPS: {coords[1].toFixed(5)}, {coords[0].toFixed(5)}
+                        </p>
+                      </div>
+
+                      {/* Tarjeta de Datos de Contacto y Encargado */}
+                      <div className="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 text-[11px]">
+                        {/* Teléfono de Contacto */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-600 dark:text-slate-400 font-medium flex items-center gap-1">
+                            <Phone className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                            <span>Contacto:</span>
+                          </span>
+                          {p.telefono_contacto ? (
+                            <a
+                              href={`tel:${p.telefono_contacto}`}
+                              className="font-bold text-sky-700 dark:text-sky-300 hover:underline flex items-center gap-1"
+                              title="Llamar directamente"
+                            >
+                              <span>{p.telefono_contacto}</span>
+                            </a>
+                          ) : (
+                            <span className="text-slate-500 font-medium">062725890 (COE)</span>
+                          )}
+                        </div>
+
+                        {/* Encargado / Responsable a Cargo */}
+                        <div className="flex items-start justify-between gap-1 pt-1.5 border-t border-slate-200 dark:border-slate-700/60">
+                          <span className="text-slate-600 dark:text-slate-400 font-medium flex items-center gap-1 shrink-0">
+                            <UserCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                            <span>Encargado:</span>
+                          </span>
+                          <span className="font-bold text-slate-900 dark:text-white text-right">
+                            {p.contacto_responsable || (isBombero ? 'Jefatura de Guardia' : 'Dirección Médica de Turno')}
+                          </span>
+                        </div>
+
+                        {/* Capacidad de Atención (Camas / Efectivos) */}
+                        <div className="flex items-center justify-between pt-1.5 border-t border-slate-200 dark:border-slate-700/60">
+                          <span className="text-slate-600 dark:text-slate-400 font-medium flex items-center gap-1">
+                            <HeartPulse className="w-3.5 h-3.5 text-rose-500" />
+                            <span>{isBombero ? 'Capacidad:' : 'Camas / Atención:'}</span>
+                          </span>
+                          <span className="font-bold text-slate-900 dark:text-white">
+                            {p.capacidad_atencion ? `${p.capacidad_atencion} ${isBombero ? 'efectivos' : 'camas'}` : (isBombero ? '45 efectivos' : '120 camas')}
+                          </span>
+                        </div>
+
+                        {/* Estado Operativo */}
+                        <div className="flex items-center justify-between pt-1.5 border-t border-slate-200 dark:border-slate-700/60">
+                          <span className="text-slate-600 dark:text-slate-400 font-medium">Disponibilidad:</span>
+                          <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-500/40">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Operativo 24/7
+                          </span>
+                        </div>
+                      </div>
+
                       {isAdmin && (
                         <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60 space-y-1.5">
                           <div className="text-[10px] text-sky-700 dark:text-sky-300 flex items-center gap-1 font-semibold">
