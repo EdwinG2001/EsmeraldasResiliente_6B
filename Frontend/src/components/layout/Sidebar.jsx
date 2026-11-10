@@ -139,6 +139,14 @@ export const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
       iconColor: 'text-purple-500',
       activeClass: 'bg-purple-100 text-purple-950 dark:bg-purple-500/20 dark:text-purple-300 font-bold border border-purple-300 dark:border-purple-500/40 shadow-sm',
     },
+    {
+      paramKey: 'agrupados',
+      paramValue: 'true',
+      label: 'Agrupados por Zona (25m)',
+      icon: Layers,
+      iconColor: 'text-indigo-600 dark:text-indigo-400',
+      activeClass: 'bg-indigo-100 text-indigo-950 dark:bg-indigo-500/20 dark:text-indigo-300 font-bold border border-indigo-300 dark:border-indigo-500/40 shadow-sm',
+    },
   ];
 
   const renderNavContent = (isMobile = false) => (
@@ -216,7 +224,7 @@ export const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
                           const isSubActive = isCurrentPage && (
                             sub.paramKey
                               ? searchParams.get(sub.paramKey) === sub.paramValue
-                              : (!searchParams.get('estado') && !searchParams.get('gravedad') && !searchParams.get('categoria') && !searchParams.get('origen'))
+                              : (!searchParams.get('estado') && !searchParams.get('gravedad') && !searchParams.get('categoria') && !searchParams.get('origen') && !searchParams.get('agrupados'))
                           );
                           const SubIcon = sub.icon;
 

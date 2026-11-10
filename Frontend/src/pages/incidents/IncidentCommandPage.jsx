@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ShieldAlert, 
   ShieldCheck,
@@ -23,7 +23,10 @@ import {
   Bot,
   Megaphone,
   X,
-  Lock
+  Lock,
+  Layers,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { reportsApi } from '../../api/reportsApi';
 import { useAuth } from '../../context/AuthContext';
@@ -58,12 +61,16 @@ export const IncidentCommandPage = () => {
   const categoryParam = searchParams.get('categoria') || 'TODAS';
   const originParam = searchParams.get('origen') || 'TODOS';
   const verifParam = searchParams.get('verificacion') || 'TODAS';
+  const agrupadosParam = searchParams.get('agrupados') === 'true';
 
   const [statusFilter, setStatusFilter] = useState(statusParam);
   const [gravityFilter, setGravityFilter] = useState(gravityParam);
   const [categoryFilter, setCategoryFilter] = useState(categoryParam);
   const [originFilter, setOriginFilter] = useState(originParam);
   const [verifFilter, setVerifFilter] = useState(verifParam);
+  const [groupByZone, setGroupByZone] = useState(agrupadosParam);
+  const [zoneRadius, setZoneRadius] = useState(25); // metros (25m por defecto, ampliable a 50m, 100m, 250m, 500m)
+  const [collapsedClusters, setCollapsedClusters] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
 
   // Sincronizar estado cuando cambie la URL (navegación desde el menú lateral)
@@ -73,7 +80,17 @@ export const IncidentCommandPage = () => {
     setCategoryFilter(categoryParam);
     setOriginFilter(originParam);
     setVerifFilter(verifParam);
+    if (agrupadosParam) {
+      setGroupByZone(true);
+    }
   }, [searchParams]);
+
+  const toggleClusterCollapsed = (clusterId) => {
+    setCollapsedClusters((prev) => ({
+      ...prev,
+      [clusterId]: !prev[clusterId],
+    }));
+  };
 
   // Modal Alerta Sectorial
   const [showAlertModal, setShowAlertModal] = useState(false);
@@ -222,9 +239,120 @@ export const IncidentCommandPage = () => {
     return true;
   });
 
-  const hasActiveFilter = statusFilter !== 'TODOS' || gravityFilter !== 'TODAS' || categoryFilter !== 'TODAS' || originFilter !== 'TODOS' || verifFilter !== 'TODAS';
+  // Cálculo de distancia geográfica en metros (Fórmula de Haversine)
+  const getDistanceMeters = (lat1, lon1, lat2, lon2) => {
+    if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return Infinity;
+    const R = 6371000;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Agrupamiento geoespacial reactivo por radio (por defecto 25m, configurable)
+  const clusteredData = useMemo(() => {
+    const visited = new Set();
+    const clusters = [];
+
+    for (let i = 0; i < filteredList.length; i++) {
+      const root = filteredList[i];
+      if (visited.has(root.id)) continue;
+
+      const group = [root];
+      visited.add(root.id);
+
+      const latA = Number(root.latitud ?? root.lat);
+      const lonA = Number(root.longitud ?? root.lon ?? root.lng);
+
+      if (!isNaN(latA) && !isNaN(lonA)) {
+        for (let j = i + 1; j < filteredList.length; j++) {
+          const candidate = filteredList[j];
+          if (visited.has(candidate.id)) continue;
+
+          const latB = Number(candidate.latitud ?? candidate.lat);
+          const lonB = Number(candidate.longitud ?? candidate.lon ?? candidate.lng);
+          if (isNaN(latB) || isNaN(lonB)) continue;
+
+          // Pertenencia al clúster si dista <= zoneRadius respecto a cualquier miembro del grupo
+          const isNearby = group.some((member) => {
+            const mLat = Number(member.latitud ?? member.lat);
+            const mLon = Number(member.longitud ?? member.lon ?? member.lng);
+            return getDistanceMeters(mLat, mLon, latB, lonB) <= zoneRadius;
+          });
+
+          if (isNearby) {
+            group.push(candidate);
+            visited.add(candidate.id);
+          }
+        }
+      }
+
+      const isMulti = group.length > 1;
+      const avgLat =
+        group.reduce((acc, c) => acc + (Number(c.latitud ?? c.lat) || 0), 0) / group.length;
+      const avgLon =
+        group.reduce((acc, c) => acc + (Number(c.longitud ?? c.lon ?? c.lng) || 0), 0) /
+        group.length;
+
+      const totalPersonas = group.reduce(
+        (acc, c) => acc + (Number(c.personas_atrapadas) || 0),
+        0
+      );
+      const totalFamilias = group.reduce(
+        (acc, c) => acc + (Number(c.familias_afectadas) || 0),
+        0
+      );
+      const hasCritico = group.some((c) => c.nivel_gravedad === 'CRITICO');
+
+      clusters.push({
+        id: `cluster-${root.id}`,
+        isCluster: isMulti,
+        count: group.length,
+        items: group,
+        center: { lat: avgLat, lon: avgLon },
+        radius: zoneRadius,
+        totalPersonas,
+        totalFamilias,
+        hasCritico,
+        primaryEvento: group[0].tipo_evento?.replace(/_/g, ' ') || 'Emergencia',
+        primarySector:
+          group[0].estimacion_danos_vivienda ||
+          group[0].descripcion?.substring(0, 60) ||
+          'Sector Esmeraldas',
+      });
+    }
+
+    // Si el usuario navegó por URL con ?agrupados=true, filtrar solo zonas con >=2 incidentes concurrentes
+    if (agrupadosParam) {
+      return clusters.filter((c) => c.isCluster);
+    }
+
+    // En modo Agrupación activo, priorizar clústeres de >=2 reportes arriba
+    return clusters.sort((a, b) => {
+      if (a.isCluster && !b.isCluster) return -1;
+      if (!a.isCluster && b.isCluster) return 1;
+      return b.count - a.count;
+    });
+  }, [filteredList, zoneRadius, agrupadosParam]);
+
+  const hasActiveFilter = 
+    statusFilter !== 'TODOS' || 
+    gravityFilter !== 'TODAS' || 
+    categoryFilter !== 'TODAS' || 
+    originFilter !== 'TODOS' || 
+    verifFilter !== 'TODAS' ||
+    agrupadosParam ||
+    groupByZone;
 
   const getActiveFilterLabel = () => {
+    if (agrupadosParam) return `📍 Zonas Agrupadas (Radio ≤ ${zoneRadius}m)`;
+    if (groupByZone) return `📍 Modo Agrupado Activo (${zoneRadius}m)`;
     if (verifFilter === 'POR_VERIFICAR') return '⚠️ Retenidos por Verificar';
     if (verifFilter === 'VERIFICADOS') return '✓ Solo Verificados';
     if (verifFilter === 'FALSOS_POSITIVOS') return '❌ Falsos Positivos Descartados';
@@ -333,6 +461,334 @@ export const IncidentCommandPage = () => {
     const lon = inc.longitud || (inc.geometry?.coordinates ? inc.geometry.coordinates[0] : (inc.lon || inc.lng || -79.6517));
     navigate(`/?focusIncident=${inc.id}&lat=${lat}&lon=${lon}`);
   };
+
+  // Renderizado unificado de tarjeta de incidente (funciona tanto para tarjetas individuales como dentro de clústeres)
+  const renderIncidentCard = (inc, clusterIndex = null, clusterTotal = null) => (
+    <div
+      key={inc.id}
+      className="bg-white dark:bg-crisis-800 border-2 border-slate-200 dark:border-crisis-700 hover:border-slate-400 dark:hover:border-slate-500 rounded-2xl p-5 transition shadow-sm space-y-3.5"
+    >
+      {/* Sub-cabecera si es parte de un clúster de zona concurrente */}
+      {clusterTotal > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 bg-indigo-50/90 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 px-3 py-1.5 rounded-xl text-xs -mt-1 mb-1">
+          <span className="font-extrabold text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <span>Reporte #{clusterIndex + 1} de {clusterTotal} en esta zona (&lt; {zoneRadius}m)</span>
+          </span>
+          <span className="text-[10px] font-mono text-indigo-700 dark:text-indigo-300 font-bold">
+            GPS: {Number(inc.latitud || 0).toFixed(5)}, {Number(inc.longitud || 0).toFixed(5)}
+          </span>
+        </div>
+      )}
+
+      {/* Fila Superior: Badges y Fecha */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {getEstadoBadge(inc.estado)}
+          {getGravedadBadge(inc.nivel_gravedad)}
+          {getVerificacionBadge(inc)}
+
+          {inc.es_simulacion ? (
+            <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase bg-purple-100 text-purple-950 border border-purple-300 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/40 shadow-sm">
+              🤖 Simulación IA COE
+            </span>
+          ) : (
+            <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase bg-sky-100 text-sky-950 border border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/40 shadow-sm">
+              📢 Reporte Ciudadano
+            </span>
+          )}
+
+          <span className="text-[11px] font-mono font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-crisis-900 px-2 py-0.5 rounded border border-slate-200 dark:border-crisis-700">
+            ID: {inc.id.substring(0, 8)}
+          </span>
+        </div>
+
+        <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
+          {new Date(inc.fecha_incidente).toLocaleString()}
+        </div>
+      </div>
+
+      {/* Contenido Central: Tipo y Descripción de Alto Contraste */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
+        <div className="lg:col-span-3 space-y-2">
+          <h3 className="text-base sm:text-lg font-black text-slate-950 dark:text-white flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+            <span>{inc.tipo_evento.replace(/_/g, ' ')}</span>
+          </h3>
+          <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
+            {inc.descripcion}
+          </p>
+
+          {inc.estimacion_danos_vivienda && (
+            <div className="text-xs text-slate-800 dark:text-slate-300 font-semibold bg-slate-100 dark:bg-slate-800/80 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+              <strong>Daños reportados:</strong> {inc.estimacion_danos_vivienda}
+            </div>
+          )}
+
+          {/* Panel de Auditoría Anti-Falso Positivo & Coherencia Hidrometeorológica */}
+          <div className={`p-3 rounded-xl border text-xs space-y-2 mt-2 transition ${
+            !inc.publicado_en_mapa || inc.estado_verificacion === 'POR_VERIFICAR'
+              ? 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700/50'
+              : inc.estado_verificacion === 'FALSO_POSITIVO'
+              ? 'bg-red-50/70 dark:bg-red-950/20 border-red-300 dark:border-red-700/50'
+              : 'bg-slate-50 dark:bg-crisis-900/60 border-slate-200 dark:border-crisis-700/60'
+          }`}>
+            <div className="flex flex-wrap items-center justify-between gap-1.5 pb-1 border-b border-slate-200/80 dark:border-crisis-700/60">
+              <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200 text-xs">
+                {inc.estado_verificacion === 'FALSO_POSITIVO' ? (
+                  <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                ) : !inc.publicado_en_mapa ? (
+                  <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 animate-pulse" />
+                ) : (
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                )}
+                <span>Auditoría de Verosimilitud & Coherencia Satelital</span>
+              </div>
+              
+              {inc.publicado_en_mapa ? (
+                <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-100 text-emerald-900 border border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40">
+                  🟢 Visible en Mapa Ciudadano
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-amber-100 text-amber-950 border border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40 animate-pulse">
+                  🔴 Retenido (Oculto del Mapa hasta revisión COE)
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
+              {/* Score Verosimilitud */}
+              <div className="bg-white/80 dark:bg-crisis-800/80 p-2 rounded-lg border border-slate-200 dark:border-crisis-700">
+                <div className="flex items-center justify-between font-bold text-slate-600 dark:text-slate-400">
+                  <span>Verosimilitud IA:</span>
+                  <span className={`font-black text-xs ${
+                    (inc.score_verosimilitud ?? 70) >= 70
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : (inc.score_verosimilitud ?? 70) >= 40
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-red-600 dark:text-red-400'
+                  }`}>
+                    {inc.score_verosimilitud ?? 70}%
+                  </span>
+                </div>
+                <div className="w-full bg-slate-200 dark:bg-crisis-700 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full transition-all ${
+                      (inc.score_verosimilitud ?? 70) >= 70
+                        ? 'bg-emerald-500'
+                        : (inc.score_verosimilitud ?? 70) >= 40
+                        ? 'bg-amber-500'
+                        : 'bg-red-500'
+                    }`}
+                    style={{ width: `${Math.min(100, Math.max(5, inc.score_verosimilitud ?? 70))}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Lluvia Histórica Open-Meteo */}
+              <div className="bg-white/80 dark:bg-crisis-800/80 p-2 rounded-lg border border-slate-200 dark:border-crisis-700">
+                <span className="block font-bold text-slate-600 dark:text-slate-400">Lluvia Satelital (±1h):</span>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <Droplets className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                  <span className="font-extrabold text-slate-900 dark:text-white">
+                    {Number(inc.lluvia_verificada_mm || 0).toFixed(1)} mm/h
+                  </span>
+                  <span className="text-[10px] text-slate-500">(Open-Meteo)</span>
+                </div>
+              </div>
+
+              {/* Desfase Temporal / Modo Offline */}
+              <div className="bg-white/80 dark:bg-crisis-800/80 p-2 rounded-lg border border-slate-200 dark:border-crisis-700">
+                <span className="block font-bold text-slate-600 dark:text-slate-400">Desfase Recepción:</span>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                  <span className="font-extrabold text-slate-900 dark:text-white">
+                    {Number(inc.desfase_horas || 0) < 0.1 ? 'Tiempo real' : `${Number(inc.desfase_horas || 0).toFixed(1)} h desfase`}
+                  </span>
+                  {Number(inc.desfase_horas || 0) >= 1.5 && (
+                    <span className="text-[9px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/60 px-1 rounded">
+                      Offline
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {inc.motivo_verificacion && (
+              <div className="text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-white/90 dark:bg-crisis-800/90 p-2 rounded-lg border border-slate-200 dark:border-crisis-700 mt-1">
+                <span className="font-black text-slate-900 dark:text-white">Diagnóstico Verificador: </span>
+                {inc.motivo_verificacion}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Métricas del Incidente: Alto Contraste */}
+        <div className="bg-slate-100 dark:bg-crisis-900/90 p-3.5 rounded-xl border border-slate-300 dark:border-crisis-700 text-xs space-y-2 shadow-sm">
+          <div className="flex justify-between items-center text-slate-800 dark:text-slate-300 font-bold">
+            <span>Personas atrapadas:</span>
+            <span className="font-black text-sm text-red-700 dark:text-red-400">{inc.personas_atrapadas}</span>
+          </div>
+          <div className="flex justify-between items-center text-slate-800 dark:text-slate-300 font-bold">
+            <span>Familias afectadas:</span>
+            <span className="font-black text-sm text-amber-800 dark:text-amber-400">{inc.familias_afectadas}</span>
+          </div>
+
+          {/* Cruce Geoespacial PostGIS con Familias Censadas */}
+          {(Number(inc.familias_en_perimetro) > 0 || Number(inc.personas_afectadas_estimadas) > 0) && (
+            <div className="pt-2 border-t border-purple-300 dark:border-purple-800/70 space-y-1">
+              <div className="flex justify-between items-center text-purple-950 dark:text-purple-300 font-black text-[11px]">
+                <span>Perímetro PostGIS ({Math.round(inc.radio_analisis_metros || 25)}m):</span>
+                <span className="px-1.5 py-0.5 rounded bg-purple-200 dark:bg-purple-900/60 text-purple-950 dark:text-purple-200">
+                  {inc.personas_afectadas_estimadas} personas ({inc.familias_en_perimetro} fam.)
+                </span>
+              </div>
+              {(Number(inc.ninos_en_riesgo) > 0 || Number(inc.adultos_mayores_riesgo) > 0 || Number(inc.discapacitados_riesgo) > 0) && (
+                <p className="text-[10px] text-purple-900 dark:text-purple-300 font-bold">
+                  • {inc.ninos_en_riesgo || 0} niños &lt;5 | {inc.adultos_mayores_riesgo || 0} ancianos | {inc.discapacitados_riesgo || 0} disc.
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-between items-center text-slate-700 dark:text-slate-400 text-xs pt-1.5 border-t border-slate-300 dark:border-crisis-700 font-semibold">
+            <span>Informante:</span>
+            <span className="truncate max-w-[120px] font-bold text-slate-900 dark:text-white">{inc.usuario_nombre}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Barra de Acciones y Transición de Estados (Workflow COE) */}
+      <div className="pt-3 border-t border-slate-200 dark:border-crisis-700/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleVerEnMapa(inc)}
+            className="w-full sm:w-auto justify-center px-3 py-1.5 text-xs font-bold text-sky-800 dark:text-sky-300 bg-sky-50 dark:bg-sky-500/10 hover:bg-sky-100 dark:hover:bg-sky-500/20 rounded-lg border border-sky-300 dark:border-sky-500/30 flex items-center gap-1.5 transition shadow-sm"
+            title="Ver coordenadas en el mapa satelital"
+          >
+            <MapPin className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+            <span>Ver en Mapa</span>
+          </button>
+        </div>
+
+        {/* Botones de Cambio de Estado con Alto Contraste (Operador / Gestor / Admin) */}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {/* Acciones de Validación Anti-Falsos Positivos */}
+          {(!inc.publicado_en_mapa || inc.estado_verificacion === 'POR_VERIFICAR') && (
+            <button
+              onClick={() => handleAprobarYPublicar(inc.id)}
+              disabled={!canOperate}
+              className={`px-3 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-1.5 shadow ${
+                canOperate
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95 cursor-pointer'
+                  : 'bg-slate-200 dark:bg-crisis-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-crisis-600 opacity-60'
+              }`}
+              title={canOperate ? 'Aprobar reporte retenido y publicarlo en el mapa en vivo' : 'Acción restringida: Requiere cuenta Operador o Gestor del COE'}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Aprobar y Publicar</span>
+              {!canOperate && <Lock className="w-3 h-3 ml-0.5 text-slate-400" />}
+            </button>
+          )}
+
+          {inc.estado_verificacion !== 'FALSO_POSITIVO' && inc.estado !== 'DESCARTADO' && (
+            <button
+              onClick={() => handleDescartarFalsoPositivo(inc.id)}
+              disabled={!canOperate}
+              className={`px-3 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-1 border ${
+                canOperate
+                  ? 'bg-red-50 hover:bg-red-100 text-red-700 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800/60 dark:hover:bg-red-900/50 cursor-pointer shadow-sm'
+                  : 'bg-slate-100 dark:bg-crisis-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-crisis-700 cursor-not-allowed opacity-60'
+              }`}
+              title={canOperate ? 'Marcar como falso positivo (descartar y ocultar del mapa)' : 'Acción restringida: Requiere cuenta Operador o Gestor del COE'}
+            >
+              <XCircle className="w-3.5 h-3.5 text-red-500" />
+              <span>Falso Positivo</span>
+              {!canOperate && <Lock className="w-3 h-3 ml-0.5 text-slate-400" />}
+            </button>
+          )}
+
+          {inc.estado === 'PENDIENTE' && (
+            <button
+              onClick={() => handleUpdateStatus(inc.id, 'EN_PROCESO')}
+              disabled={!canOperate}
+              className={`px-3.5 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-1.5 shadow ${
+                canOperate
+                  ? 'bg-sky-600 hover:bg-sky-500 text-white active:scale-95 cursor-pointer'
+                  : 'bg-slate-200 dark:bg-crisis-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-crisis-600 opacity-60'
+              }`}
+              title={canOperate ? 'Despachar auxilio al incidente' : 'Acción restringida: Requiere cuenta Operador o Gestor del COE'}
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Despachar / En Proceso</span>
+              {!canOperate && <Lock className="w-3 h-3 ml-0.5 text-slate-400" />}
+            </button>
+          )}
+
+          {inc.estado === 'EN_PROCESO' && (
+            <button
+              onClick={() => handleUpdateStatus(inc.id, 'ATENDIDO')}
+              disabled={!canOperate}
+              className={`px-3.5 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-1.5 shadow ${
+                canOperate
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95 cursor-pointer'
+                  : 'bg-slate-200 dark:bg-crisis-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-crisis-600 opacity-60'
+              }`}
+              title={canOperate ? 'Marcar caso como atendido' : 'Acción restringida: Requiere cuenta Operador o Gestor del COE'}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Marcar Atendido</span>
+              {!canOperate && <Lock className="w-3 h-3 ml-0.5 text-slate-400" />}
+            </button>
+          )}
+
+          {inc.estado === 'ATENDIDO' && (
+            <button
+              onClick={() => handleUpdateStatus(inc.id, 'EN_PROCESO')}
+              disabled={!canOperate}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow ${
+                canOperate
+                  ? 'bg-slate-800 hover:bg-slate-700 text-white active:scale-95 cursor-pointer'
+                  : 'bg-slate-200 dark:bg-crisis-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-crisis-600 opacity-60'
+              }`}
+              title={canOperate ? 'Reabrir caso' : 'Acción restringida: Requiere cuenta Operador o Gestor del COE'}
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Reabrir Caso</span>
+              {!canOperate && <Lock className="w-3 h-3 ml-0.5 text-slate-400" />}
+            </button>
+          )}
+
+          {inc.estado !== 'DESCARTADO' && (
+            <button
+              onClick={() => handleUpdateStatus(inc.id, 'DESCARTADO')}
+              disabled={!canOperate}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
+                canOperate
+                  ? 'bg-slate-100 hover:bg-red-50 text-slate-700 hover:text-red-700 border-slate-300 dark:bg-crisis-700 dark:text-slate-300 dark:border-crisis-600 dark:hover:bg-red-950/40 dark:hover:text-red-400 cursor-pointer'
+                  : 'bg-slate-100 dark:bg-crisis-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-crisis-700 cursor-not-allowed opacity-60'
+              }`}
+              title={canOperate ? 'Descartar reporte no verificado o duplicado' : 'Acción restringida: Requiere cuenta Operador o Gestor del COE'}
+            >
+              <span>Descartar</span>
+              {!canOperate && <Lock className="w-3 h-3 inline ml-1 text-slate-400" />}
+            </button>
+          )}
+
+          {/* Eliminar (Exclusivo Gestor / Administrador) */}
+          {canManage && (
+            <button
+              onClick={() => handleDelete(inc.id)}
+              className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-crisis-700 dark:hover:text-red-400 rounded-lg transition"
+              title="Eliminar reporte de la base de datos (Gestor / Admin)"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="max-w-7xl mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
@@ -540,8 +996,8 @@ export const IncidentCommandPage = () => {
         </div>
       </div>
 
-      {/* BARRA SIMPLIFICADA: INDICADOR DE FILTRO ACTIVO Y BÚSQUEDA RÁPIDA */}
-      <div className="bg-white dark:bg-crisis-800 border border-slate-200 dark:border-crisis-700 p-3 sm:p-3.5 rounded-xl shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      {/* BARRA SIMPLIFICADA: INDICADOR DE FILTRO ACTIVO, AGRUPACIÓN POR ZONA Y BÚSQUEDA */}
+      <div className="bg-white dark:bg-crisis-800 border border-slate-200 dark:border-crisis-700 p-3 sm:p-3.5 rounded-xl shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-slate-800 dark:text-slate-300 font-bold flex items-center gap-1.5">
             <Filter className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
@@ -549,13 +1005,14 @@ export const IncidentCommandPage = () => {
           </span>
 
           {hasActiveFilter ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="px-3 py-1 rounded-lg text-xs font-black bg-sky-100 text-sky-950 border border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/40 flex items-center gap-1 shadow-sm">
                 {getActiveFilterLabel()}
               </span>
               <button
                 onClick={() => {
                   setSearchParams({});
+                  setGroupByZone(false);
                   setSearchTerm('');
                 }}
                 className="px-2.5 py-1 text-xs font-bold text-slate-800 dark:text-slate-200 hover:text-red-700 dark:hover:text-red-400 bg-slate-100 dark:bg-crisis-700 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg border border-slate-300 dark:border-crisis-600 transition flex items-center gap-1 shadow-sm"
@@ -571,13 +1028,53 @@ export const IncidentCommandPage = () => {
             </span>
           )}
 
-          <span className="text-xs text-slate-700 dark:text-slate-400 font-bold pl-2 hidden md:inline">
-            • {filteredList.length} mostrados
+          {/* Controles de Agrupación Geoespacial por Zona (Radio 25m ampliable) */}
+          <div className="flex items-center gap-1.5 pl-0 sm:pl-2">
+            <button
+              onClick={() => {
+                if (agrupadosParam) {
+                  setSearchParams({});
+                  setGroupByZone(false);
+                } else {
+                  setGroupByZone(!groupByZone);
+                }
+              }}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm border cursor-pointer ${
+                groupByZone || agrupadosParam
+                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-700 shadow ring-2 ring-indigo-400/40'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-crisis-700 dark:text-slate-200 dark:hover:bg-crisis-600 border-slate-300 dark:border-crisis-600'
+              }`}
+              title="Activar o desactivar agrupación de incidentes por zona de proximidad"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>{groupByZone || agrupadosParam ? '📍 Agrupado por Zona' : 'Agrupar por Zona'}</span>
+            </button>
+
+            {(groupByZone || agrupadosParam) && (
+              <div className="flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded-lg border border-indigo-300 dark:border-indigo-800 text-xs">
+                <span className="font-bold text-indigo-950 dark:text-indigo-300 text-[11px]">Radio:</span>
+                <select
+                  value={zoneRadius}
+                  onChange={(e) => setZoneRadius(Number(e.target.value))}
+                  className="bg-white dark:bg-crisis-800 text-slate-900 dark:text-white font-bold text-xs rounded border border-indigo-300 dark:border-indigo-700 px-1.5 py-0.5 focus:outline-none cursor-pointer"
+                >
+                  <option value={25}>25 m (Mismo perímetro / Vecinos)</option>
+                  <option value={50}>50 m (Media cuadra / 50m)</option>
+                  <option value={100}>100 m (Manzana completa / 100m)</option>
+                  <option value={250}>250 m (Sector barrial / 250m)</option>
+                  <option value={500}>500 m (Macro-zona / 500m)</option>
+                </select>
+              </div>
+            )}
+          </div>
+
+          <span className="text-xs text-slate-700 dark:text-slate-400 font-bold pl-1 hidden xl:inline">
+            • {(groupByZone || agrupadosParam) ? `${clusteredData.length} grupos (${filteredList.length} incidentes)` : `${filteredList.length} mostrados`}
           </span>
         </div>
 
         {/* Buscador de Incidentes */}
-        <div className="relative w-full sm:w-auto sm:min-w-[260px]">
+        <div className="relative w-full lg:w-auto lg:min-w-[260px]">
           <Search className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
@@ -602,320 +1099,85 @@ export const IncidentCommandPage = () => {
             <p className="text-base font-extrabold text-slate-900 dark:text-white">No hay incidentes con los filtros seleccionados.</p>
             <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Intenta seleccionar otra categoría en el menú lateral o hacer clic en "Ver Todos".</p>
           </div>
-        ) : (
-          filteredList.map((inc) => (
-            <div
-              key={inc.id}
-              className="bg-white dark:bg-crisis-800 border-2 border-slate-200 dark:border-crisis-700 hover:border-slate-400 dark:hover:border-slate-500 rounded-2xl p-5 transition shadow-sm space-y-3.5"
-            >
-              {/* Fila Superior: Badges y Fecha */}
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  {getEstadoBadge(inc.estado)}
-                  {getGravedadBadge(inc.nivel_gravedad)}
-                  {getVerificacionBadge(inc)}
-
-                  {inc.es_simulacion ? (
-                    <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase bg-purple-100 text-purple-950 border border-purple-300 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/40 shadow-sm">
-                      🤖 Simulación IA COE
-                    </span>
-                  ) : (
-                    <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase bg-sky-100 text-sky-950 border border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/40 shadow-sm">
-                      📢 Reporte Ciudadano
-                    </span>
-                  )}
-
-                  <span className="text-[11px] font-mono font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-crisis-900 px-2 py-0.5 rounded border border-slate-200 dark:border-crisis-700">
-                    ID: {inc.id.substring(0, 8)}
-                  </span>
-                </div>
-
-                <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  {new Date(inc.fecha_incidente).toLocaleString()}
-                </div>
-              </div>
-
-              {/* Contenido Central: Tipo y Descripción de Alto Contraste */}
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
-                <div className="lg:col-span-3 space-y-2">
-                  <h3 className="text-base sm:text-lg font-black text-slate-950 dark:text-white flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
-                    <span>{inc.tipo_evento.replace(/_/g, ' ')}</span>
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
-                    {inc.descripcion}
-                  </p>
-
-                  {inc.estimacion_danos_vivienda && (
-                    <div className="text-xs text-slate-800 dark:text-slate-300 font-semibold bg-slate-100 dark:bg-slate-800/80 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
-                      <strong>Daños reportados:</strong> {inc.estimacion_danos_vivienda}
-                    </div>
-                  )}
-
-                  {/* Panel de Auditoría Anti-Falso Positivo & Coherencia Hidrometeorológica */}
-                  <div className={`p-3 rounded-xl border text-xs space-y-2 mt-2 transition ${
-                    !inc.publicado_en_mapa || inc.estado_verificacion === 'POR_VERIFICAR'
-                      ? 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700/50'
-                      : inc.estado_verificacion === 'FALSO_POSITIVO'
-                      ? 'bg-red-50/70 dark:bg-red-950/20 border-red-300 dark:border-red-700/50'
-                      : 'bg-slate-50 dark:bg-crisis-900/60 border-slate-200 dark:border-crisis-700/60'
-                  }`}>
-                    <div className="flex flex-wrap items-center justify-between gap-1.5 pb-1 border-b border-slate-200/80 dark:border-crisis-700/60">
-                      <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200 text-xs">
-                        {inc.estado_verificacion === 'FALSO_POSITIVO' ? (
-                          <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
-                        ) : !inc.publicado_en_mapa ? (
-                          <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 animate-pulse" />
-                        ) : (
-                          <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        )}
-                        <span>Auditoría de Verosimilitud & Coherencia Satelital</span>
-                      </div>
-                      
-                      {inc.publicado_en_mapa ? (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-100 text-emerald-900 border border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40">
-                          🟢 Visible en Mapa Ciudadano
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40 animate-pulse">
-                          🔴 Retenido (Oculto del Mapa hasta revisión COE)
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
-                      {/* Score Verosimilitud */}
-                      <div className="bg-white/80 dark:bg-crisis-800/80 p-2 rounded-lg border border-slate-200 dark:border-crisis-700">
-                        <div className="flex items-center justify-between font-bold text-slate-600 dark:text-slate-400">
-                          <span>Verosimilitud IA:</span>
-                          <span className={`font-black text-xs ${
-                            (inc.score_verosimilitud ?? 70) >= 70
-                              ? 'text-emerald-600 dark:text-emerald-400'
-                              : (inc.score_verosimilitud ?? 70) >= 40
-                              ? 'text-amber-600 dark:text-amber-400'
-                              : 'text-red-600 dark:text-red-400'
-                          }`}>
-                            {inc.score_verosimilitud ?? 70}%
+        ) : (groupByZone || agrupadosParam) ? (
+          clusteredData.length === 0 ? (
+            <div className="text-center py-16 bg-white dark:bg-crisis-800 rounded-2xl border border-slate-200 dark:border-crisis-700 space-y-2">
+              <FileCheck className="w-10 h-10 mx-auto text-slate-400 dark:text-slate-500" />
+              <p className="text-base font-extrabold text-slate-900 dark:text-white">No hay incidentes concurrentes agrupados en un radio de {zoneRadius}m.</p>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Puedes ampliar el radio de búsqueda o hacer clic en "Ver Todos".</p>
+            </div>
+          ) : (
+            clusteredData.map((cluster) => {
+              if (cluster.isCluster) {
+                const isCollapsed = Boolean(collapsedClusters[cluster.id]);
+                return (
+                  <div
+                    key={cluster.id}
+                    className="bg-slate-50/90 dark:bg-crisis-900/70 border-2 border-indigo-300 dark:border-indigo-600/50 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4 transition"
+                  >
+                    {/* Separador / Encabezado de Zona Agrupada (Clúster Geoespacial) */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-indigo-200 dark:border-indigo-800/60">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="px-3 py-1 rounded-lg text-xs font-black uppercase bg-indigo-600 text-white flex items-center gap-1.5 shadow-sm">
+                            <Layers className="w-4 h-4 animate-pulse" />
+                            <span>Zona Agrupada • {cluster.count} Reportes Concurrentes</span>
                           </span>
-                        </div>
-                        <div className="w-full bg-slate-200 dark:bg-crisis-700 h-1.5 rounded-full mt-1.5 overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full transition-all ${
-                              (inc.score_verosimilitud ?? 70) >= 70
-                                ? 'bg-emerald-500'
-                                : (inc.score_verosimilitud ?? 70) >= 40
-                                ? 'bg-amber-500'
-                                : 'bg-red-500'
-                            }`}
-                            style={{ width: `${Math.min(100, Math.max(5, inc.score_verosimilitud ?? 70))}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Lluvia Histórica Open-Meteo */}
-                      <div className="bg-white/80 dark:bg-crisis-800/80 p-2 rounded-lg border border-slate-200 dark:border-crisis-700">
-                        <span className="block font-bold text-slate-600 dark:text-slate-400">Lluvia Satelital (±1h):</span>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <Droplets className="w-3.5 h-3.5 text-sky-500 shrink-0" />
-                          <span className="font-extrabold text-slate-900 dark:text-white">
-                            {Number(inc.lluvia_verificada_mm || 0).toFixed(1)} mm/h
+                          <span className="px-2.5 py-0.5 rounded text-[11px] font-bold bg-indigo-100 text-indigo-950 dark:bg-indigo-900/60 dark:text-indigo-200 border border-indigo-300 dark:border-indigo-700">
+                            Radio de vecindad ≤ {zoneRadius}m
                           </span>
-                          <span className="text-[10px] text-slate-500">(Open-Meteo)</span>
-                        </div>
-                      </div>
-
-                      {/* Desfase Temporal / Modo Offline */}
-                      <div className="bg-white/80 dark:bg-crisis-800/80 p-2 rounded-lg border border-slate-200 dark:border-crisis-700">
-                        <span className="block font-bold text-slate-600 dark:text-slate-400">Desfase Recepción:</span>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                          <span className="font-extrabold text-slate-900 dark:text-white">
-                            {Number(inc.desfase_horas || 0) < 0.1 ? 'Tiempo real' : `${Number(inc.desfase_horas || 0).toFixed(1)} h desfase`}
-                          </span>
-                          {Number(inc.desfase_horas || 0) >= 1.5 && (
-                            <span className="text-[9px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/60 px-1 rounded">
-                              Offline
+                          {cluster.hasCritico && (
+                            <span className="px-2.5 py-0.5 rounded text-[11px] font-black uppercase bg-red-100 text-red-950 border border-red-300 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/40 animate-pulse">
+                              🚨 Nivel Crítico en la Zona
                             </span>
                           )}
                         </div>
+
+                        <h3 className="text-base sm:text-lg font-black text-slate-950 dark:text-white flex items-center gap-2 pt-1">
+                          <MapPin className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                          <span>{cluster.primaryEvento}</span>
+                          <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                            (GPS Centro: {cluster.center.lat.toFixed(5)}, {cluster.center.lon.toFixed(5)})
+                          </span>
+                        </h3>
+                      </div>
+
+                      {/* Métricas consolidadas de la zona y botón desplegable */}
+                      <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+                        <div className="text-xs bg-white dark:bg-crisis-800 px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800/80 shadow-sm">
+                          <span className="font-bold text-slate-700 dark:text-slate-300">
+                            Total Zona: <strong className="text-red-600 dark:text-red-400">{cluster.totalPersonas} personas</strong> • <strong className="text-amber-600 dark:text-amber-400">{cluster.totalFamilias} fam.</strong>
+                          </span>
+                        </div>
+
+                        <button
+                          onClick={() => toggleClusterCollapsed(cluster.id)}
+                          className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow active:scale-95 cursor-pointer whitespace-nowrap"
+                          title={isCollapsed ? 'Ver los reportes individuales de este clúster' : 'Ocultar los reportes individuales de este clúster'}
+                        >
+                          <span>{isCollapsed ? `Desplegar ${cluster.count} Incidentes` : `Ocultar ${cluster.count} Incidentes`}</span>
+                          {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                        </button>
                       </div>
                     </div>
 
-                    {inc.motivo_verificacion && (
-                      <div className="text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-white/90 dark:bg-crisis-800/90 p-2 rounded-lg border border-slate-200 dark:border-crisis-700 mt-1">
-                        <span className="font-black text-slate-900 dark:text-white">Diagnóstico Verificador: </span>
-                        {inc.motivo_verificacion}
+                    {/* Listado Desplegable con cada Incidente Individual */}
+                    {!isCollapsed && (
+                      <div className="space-y-3.5 pt-1 pl-1 sm:pl-3 border-l-4 border-indigo-400 dark:border-indigo-600">
+                        <div className="text-xs font-bold text-indigo-950 dark:text-indigo-300 flex items-center gap-1.5">
+                          <span>📋 Detalle de cada reporte ciudadano registrado en esta misma zona (&lt; {zoneRadius}m):</span>
+                        </div>
+                        {cluster.items.map((inc, idx) => renderIncidentCard(inc, idx, cluster.count))}
                       </div>
                     )}
                   </div>
-                </div>
-
-                {/* Métricas del Incidente: Alto Contraste */}
-                <div className="bg-slate-100 dark:bg-crisis-900/90 p-3.5 rounded-xl border border-slate-300 dark:border-crisis-700 text-xs space-y-2 shadow-sm">
-                  <div className="flex justify-between items-center text-slate-800 dark:text-slate-300 font-bold">
-                    <span>Personas atrapadas:</span>
-                    <span className="font-black text-sm text-red-700 dark:text-red-400">{inc.personas_atrapadas}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-slate-800 dark:text-slate-300 font-bold">
-                    <span>Familias afectadas:</span>
-                    <span className="font-black text-sm text-amber-800 dark:text-amber-400">{inc.familias_afectadas}</span>
-                  </div>
-
-                  {/* Cruce Geoespacial PostGIS con Familias Censadas */}
-                  {(Number(inc.familias_en_perimetro) > 0 || Number(inc.personas_afectadas_estimadas) > 0) && (
-                    <div className="pt-2 border-t border-purple-300 dark:border-purple-800/70 space-y-1">
-                      <div className="flex justify-between items-center text-purple-950 dark:text-purple-300 font-black text-[11px]">
-                        <span>Perímetro PostGIS ({Math.round(inc.radio_analisis_metros || 25)}m):</span>
-                        <span className="px-1.5 py-0.5 rounded bg-purple-200 dark:bg-purple-900/60 text-purple-950 dark:text-purple-200">
-                          {inc.personas_afectadas_estimadas} personas ({inc.familias_en_perimetro} fam.)
-                        </span>
-                      </div>
-                      {(Number(inc.ninos_en_riesgo) > 0 || Number(inc.adultos_mayores_riesgo) > 0 || Number(inc.discapacitados_riesgo) > 0) && (
-                        <p className="text-[10px] text-purple-900 dark:text-purple-300 font-bold">
-                          • {inc.ninos_en_riesgo || 0} niños &lt;5 | {inc.adultos_mayores_riesgo || 0} ancianos | {inc.discapacitados_riesgo || 0} disc.
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="flex justify-between items-center text-slate-700 dark:text-slate-400 text-xs pt-1.5 border-t border-slate-300 dark:border-crisis-700 font-semibold">
-                    <span>Informante:</span>
-                    <span className="truncate max-w-[120px] font-bold text-slate-900 dark:text-white">{inc.usuario_nombre}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Barra de Acciones y Transición de Estados (Workflow COE) */}
-              <div className="pt-3 border-t border-slate-200 dark:border-crisis-700/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleVerEnMapa(inc)}
-                    className="w-full sm:w-auto justify-center px-3 py-1.5 text-xs font-bold text-sky-800 dark:text-sky-300 bg-sky-50 dark:bg-sky-500/10 hover:bg-sky-100 dark:hover:bg-sky-500/20 rounded-lg border border-sky-300 dark:border-sky-500/30 flex items-center gap-1.5 transition shadow-sm"
-                    title="Ver coordenadas en el mapa satelital"
-                  >
-                    <MapPin className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-                    <span>Ver en Mapa</span>
-                  </button>
-                </div>
-
-                {/* Botones de Cambio de Estado con Alto Contraste (Operador / Gestor / Admin) */}
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  {/* Acciones de Validación Anti-Falsos Positivos */}
-                  {(!inc.publicado_en_mapa || inc.estado_verificacion === 'POR_VERIFICAR') && (
-                    <button
-                      onClick={() => handleAprobarYPublicar(inc.id)}
-                      disabled={!canOperate}
-                      className={`px-3 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-1.5 shadow ${
-                        canOperate
-                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95 cursor-pointer'
-                          : 'bg-slate-200 dark:bg-crisis-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-crisis-600 opacity-60'
-                      }`}
-                      title={canOperate ? 'Aprobar reporte retenido y publicarlo en el mapa en vivo' : 'Acción restringida: Requiere cuenta Operador o Gestor del COE'}
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>Aprobar y Publicar</span>
-                      {!canOperate && <Lock className="w-3 h-3 ml-0.5 text-slate-400" />}
-                    </button>
-                  )}
-
-                  {inc.estado_verificacion !== 'FALSO_POSITIVO' && inc.estado !== 'DESCARTADO' && (
-                    <button
-                      onClick={() => handleDescartarFalsoPositivo(inc.id)}
-                      disabled={!canOperate}
-                      className={`px-3 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-1 border ${
-                        canOperate
-                          ? 'bg-red-50 hover:bg-red-100 text-red-700 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800/60 dark:hover:bg-red-900/50 cursor-pointer shadow-sm'
-                          : 'bg-slate-100 dark:bg-crisis-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-crisis-700 cursor-not-allowed opacity-60'
-                      }`}
-                      title={canOperate ? 'Marcar como falso positivo (descartar y ocultar del mapa)' : 'Acción restringida: Requiere cuenta Operador o Gestor del COE'}
-                    >
-                      <XCircle className="w-3.5 h-3.5 text-red-500" />
-                      <span>Falso Positivo</span>
-                      {!canOperate && <Lock className="w-3 h-3 ml-0.5 text-slate-400" />}
-                    </button>
-                  )}
-
-                  {inc.estado === 'PENDIENTE' && (
-                    <button
-                      onClick={() => handleUpdateStatus(inc.id, 'EN_PROCESO')}
-                      disabled={!canOperate}
-                      className={`px-3.5 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-1.5 shadow ${
-                        canOperate
-                          ? 'bg-sky-600 hover:bg-sky-500 text-white active:scale-95 cursor-pointer'
-                          : 'bg-slate-200 dark:bg-crisis-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-crisis-600 opacity-60'
-                      }`}
-                      title={canOperate ? 'Despachar auxilio al incidente' : 'Acción restringida: Requiere cuenta Operador o Gestor del COE'}
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      <span>Despachar / En Proceso</span>
-                      {!canOperate && <Lock className="w-3 h-3 ml-0.5 text-slate-400" />}
-                    </button>
-                  )}
-
-                  {inc.estado === 'EN_PROCESO' && (
-                    <button
-                      onClick={() => handleUpdateStatus(inc.id, 'ATENDIDO')}
-                      disabled={!canOperate}
-                      className={`px-3.5 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-1.5 shadow ${
-                        canOperate
-                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95 cursor-pointer'
-                          : 'bg-slate-200 dark:bg-crisis-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-crisis-600 opacity-60'
-                      }`}
-                      title={canOperate ? 'Marcar caso como atendido' : 'Acción restringida: Requiere cuenta Operador o Gestor del COE'}
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Marcar Atendido</span>
-                      {!canOperate && <Lock className="w-3 h-3 ml-0.5 text-slate-400" />}
-                    </button>
-                  )}
-
-                  {inc.estado === 'ATENDIDO' && (
-                    <button
-                      onClick={() => handleUpdateStatus(inc.id, 'EN_PROCESO')}
-                      disabled={!canOperate}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow ${
-                        canOperate
-                          ? 'bg-slate-800 hover:bg-slate-700 text-white active:scale-95 cursor-pointer'
-                          : 'bg-slate-200 dark:bg-crisis-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-crisis-600 opacity-60'
-                      }`}
-                      title={canOperate ? 'Reabrir caso' : 'Acción restringida: Requiere cuenta Operador o Gestor del COE'}
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      <span>Reabrir Caso</span>
-                      {!canOperate && <Lock className="w-3 h-3 ml-0.5 text-slate-400" />}
-                    </button>
-                  )}
-
-                  {inc.estado !== 'DESCARTADO' && (
-                    <button
-                      onClick={() => handleUpdateStatus(inc.id, 'DESCARTADO')}
-                      disabled={!canOperate}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
-                        canOperate
-                          ? 'bg-slate-100 hover:bg-red-50 text-slate-700 hover:text-red-700 border-slate-300 dark:bg-crisis-700 dark:text-slate-300 dark:border-crisis-600 dark:hover:bg-red-950/40 dark:hover:text-red-400 cursor-pointer'
-                          : 'bg-slate-100 dark:bg-crisis-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-crisis-700 cursor-not-allowed opacity-60'
-                      }`}
-                      title={canOperate ? 'Descartar reporte no verificado o duplicado' : 'Acción restringida: Requiere cuenta Operador o Gestor del COE'}
-                    >
-                      <span>Descartar</span>
-                      {!canOperate && <Lock className="w-3 h-3 inline ml-1 text-slate-400" />}
-                    </button>
-                  )}
-
-                  {/* Eliminar (Exclusivo Gestor / Administrador) */}
-                  {canManage && (
-                    <button
-                      onClick={() => handleDelete(inc.id)}
-                      className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-crisis-700 dark:hover:text-red-400 rounded-lg transition"
-                      title="Eliminar reporte de la base de datos (Gestor / Admin)"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))
+                );
+              }
+              return renderIncidentCard(cluster.items[0]);
+            })
+          )
+        ) : (
+          filteredList.map((inc) => renderIncidentCard(inc))
         )}
       </div>
 
