@@ -24,11 +24,16 @@ class ConsultaIAView(APIView):
 class HistorialConsultasIAView(APIView):
     """
     Historial de preguntas y respuestas almacenadas en PostgreSQL.
+    Cada usuario autenticado tiene acceso estricto y único a su propio historial.
+    Si no hay usuario autenticado (modo invitado/anónimo), devuelve lista vacía.
     """
     permission_classes = [AllowAny]
 
     def get(self, request):
-        consultas = ConsultaIA.objects.all()[:30]
+        if not request.user or not request.user.is_authenticated:
+            return Response([], status=status.HTTP_200_OK)
+
+        consultas = ConsultaIA.objects.filter(usuario=request.user)[:50]
         data = [
             {
                 'id': str(c.id),
@@ -36,15 +41,22 @@ class HistorialConsultasIAView(APIView):
                 'respuesta': c.respuesta,
                 'categoria': c.categoria,
                 'datos_contexto': c.datos_contexto,
-                'fecha_creacion': c.fecha_creacion.isoformat()
+                'fecha_creacion': c.fecha_creacion.isoformat(),
+                'almacenado': True
             }
             for c in consultas
         ]
         return Response(data, status=status.HTTP_200_OK)
 
     def delete(self, request):
-        ConsultaIA.objects.all().delete()
-        return Response({'mensaje': 'Historial de consultas borrado correctamente.'}, status=status.HTTP_200_OK)
+        if not request.user or not request.user.is_authenticated:
+            return Response({'mensaje': 'No hay historial para borrar.'}, status=status.HTTP_200_OK)
+
+        eliminados, _ = ConsultaIA.objects.filter(usuario=request.user).delete()
+        return Response(
+            {'mensaje': f'Se han borrado {eliminados} consultas de tu historial personal.'},
+            status=status.HTTP_200_OK
+        )
 
 # ================= ENDPOINTS TÉCNICOS ESPECÍFICOS DEL MÓDULO 6 =================
 

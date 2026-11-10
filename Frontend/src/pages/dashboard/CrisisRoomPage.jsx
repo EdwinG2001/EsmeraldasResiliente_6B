@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
   MapContainer, 
   TileLayer, 
@@ -432,8 +432,9 @@ export const CrisisRoomPage = () => {
   const [baseMap, setBaseMap] = useState('calles');
 
   // Navegación y parámetros URL para foco automático desde Centro de Incidentes
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Estado de incidentes comunitarios en vivo (Aiven PostgreSQL)
   const [incidentesData, setIncidentesData] = useState(null);
@@ -511,8 +512,12 @@ export const CrisisRoomPage = () => {
         e.preventDefault();
         e.stopPropagation();
         setSelectedIncidentId(null);
-        if (searchParams.get('focusIncident')) {
-          navigate('/', { replace: true });
+        if (location.pathname === '/' && searchParams.get('focusIncident')) {
+          const newParams = new URLSearchParams(searchParams);
+          newParams.delete('focusIncident');
+          newParams.delete('lat');
+          newParams.delete('lon');
+          setSearchParams(newParams, { replace: true });
         }
       }
     };
@@ -1568,9 +1573,6 @@ export const CrisisRoomPage = () => {
                     },
                     popupclose: () => {
                       setSelectedIncidentId(null);
-                      if (searchParams.get('focusIncident') === incId) {
-                        navigate('/', { replace: true });
-                      }
                     },
                   }}
                 >
@@ -1672,8 +1674,12 @@ export const CrisisRoomPage = () => {
                             const marker = incidentMarkerRefs.current[incId];
                             if (marker) marker.closePopup();
                             setSelectedIncidentId(null);
-                            if (searchParams.get('focusIncident')) {
-                              navigate('/', { replace: true });
+                            if (location.pathname === '/' && searchParams.get('focusIncident')) {
+                              const newParams = new URLSearchParams(searchParams);
+                              newParams.delete('focusIncident');
+                              newParams.delete('lat');
+                              newParams.delete('lon');
+                              setSearchParams(newParams, { replace: true });
                             }
                           }}
                           className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 shadow-sm"
@@ -1683,7 +1689,12 @@ export const CrisisRoomPage = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => navigate('/incidentes')}
+                          onClick={() => {
+                            const marker = incidentMarkerRefs.current[incId];
+                            if (marker) marker.closePopup();
+                            setSelectedIncidentId(null);
+                            navigate('/incidentes');
+                          }}
                           className="flex-1 py-1.5 bg-sky-600 hover:bg-sky-500 active:scale-98 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />

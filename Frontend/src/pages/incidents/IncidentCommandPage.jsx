@@ -499,12 +499,12 @@ export const IncidentCommandPage = () => {
           )}
 
           <span className="text-[11px] font-mono font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-crisis-900 px-2 py-0.5 rounded border border-slate-200 dark:border-crisis-700">
-            ID: {inc.id.substring(0, 8)}
+            ID: {String(inc.id || '').substring(0, 8)}
           </span>
         </div>
 
         <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
-          {new Date(inc.fecha_incidente).toLocaleString()}
+          {inc.fecha_incidente ? new Date(inc.fecha_incidente).toLocaleString() : 'Fecha no registrada'}
         </div>
       </div>
 
@@ -513,10 +513,10 @@ export const IncidentCommandPage = () => {
         <div className="lg:col-span-3 space-y-2">
           <h3 className="text-base sm:text-lg font-black text-slate-950 dark:text-white flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
-            <span>{inc.tipo_evento.replace(/_/g, ' ')}</span>
+            <span>{(inc.tipo_evento || 'Emergencia').replace(/_/g, ' ')}</span>
           </h3>
           <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
-            {inc.descripcion}
+            {inc.descripcion || 'Sin descripción detallada'}
           </p>
 
           {inc.estimacion_danos_vivienda && (
@@ -1137,7 +1137,7 @@ export const IncidentCommandPage = () => {
                           <MapPin className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
                           <span>{cluster.primaryEvento}</span>
                           <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                            (GPS Centro: {cluster.center.lat.toFixed(5)}, {cluster.center.lon.toFixed(5)})
+                            (GPS Centro: {Number(cluster.center?.lat || 0).toFixed(5)}, {Number(cluster.center?.lon || 0).toFixed(5)})
                           </span>
                         </h3>
                       </div>

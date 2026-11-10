@@ -1,6 +1,8 @@
 import os
 import json
 import re
+import uuid
+from django.utils import timezone
 from .models import ConsultaIA
 from .core.historical_analyzer import HistoricalAnalyzer
 from .core.recurrence_engine import RecurrenceEngine
@@ -415,21 +417,33 @@ class AIAssistantService:
                 + DISCLAIMER
             )
 
-        # Guardar en base de datos PostgreSQL
-        consulta = ConsultaIA.objects.create(
-            usuario=usuario if (usuario and usuario.is_authenticated) else None,
-            pregunta=pregunta,
-            respuesta=respuesta,
-            categoria=categoria,
-            datos_contexto=datos_contexto,
-            es_experimental=True
-        )
-
-        return {
-            "id": str(consulta.id),
-            "pregunta": consulta.pregunta,
-            "respuesta": consulta.respuesta,
-            "categoria": consulta.categoria,
-            "datos_contexto": consulta.datos_contexto,
-            "fecha_creacion": consulta.fecha_creacion.isoformat()
-        }
+        # Guardar en base de datos PostgreSQL ÚNICAMENTE si el usuario está autenticado
+        if usuario and usuario.is_authenticated:
+            consulta = ConsultaIA.objects.create(
+                usuario=usuario,
+                pregunta=pregunta,
+                respuesta=respuesta,
+                categoria=categoria,
+                datos_contexto=datos_contexto,
+                es_experimental=True
+            )
+            return {
+                "id": str(consulta.id),
+                "pregunta": consulta.pregunta,
+                "respuesta": consulta.respuesta,
+                "categoria": consulta.categoria,
+                "datos_contexto": consulta.datos_contexto,
+                "fecha_creacion": consulta.fecha_creacion.isoformat(),
+                "almacenado": True
+            }
+        else:
+            # Modo anónimo / sin sesión: se responde en tiempo real pero NO se almacena en la base de datos
+            return {
+                "id": str(uuid.uuid4()),
+                "pregunta": pregunta,
+                "respuesta": respuesta,
+                "categoria": categoria,
+                "datos_contexto": datos_contexto,
+                "fecha_creacion": timezone.now().isoformat(),
+                "almacenado": False
+            }
