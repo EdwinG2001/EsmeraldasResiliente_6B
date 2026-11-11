@@ -1,24 +1,24 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  MapContainer, 
-  TileLayer, 
-  GeoJSON, 
-  Marker, 
-  Popup, 
+import {
+  MapContainer,
+  TileLayer,
+  GeoJSON,
+  Marker,
+  Popup,
   Circle,
-  useMap, 
-  useMapEvents 
+  useMap,
+  useMapEvents
 } from 'react-leaflet';
 import L from 'leaflet';
-import { 
-  Thermometer, 
-  Droplets, 
-  Wind, 
-  Cloud, 
-  Zap, 
-  Play, 
-  Pause, 
+import {
+  Thermometer,
+  Droplets,
+  Wind,
+  Cloud,
+  Zap,
+  Play,
+  Pause,
   RefreshCw,
   ShieldCheck,
   AlertTriangle,
@@ -49,9 +49,6 @@ import { evacuationApi } from '../../api/evacuationApi';
 import { reportsApi } from '../../api/reportsApi';
 import { useAuth } from '../../context/AuthContext';
 import { ErrorBoundary } from '../../components/common/ErrorBoundary';
-
-// API Key oficial de CARTO para eliminar marcas de agua en teselas Voyager
-const CARTO_API_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJhIjoiYWNfZTViYzllYjYiLCJqdGkiOiIyNjk1OGQwYWE0ZDYwZTUyYmI5Nzk0MTFmOThlYjJjZiJ9.EGdBLX9QpAvUHvpBcjrHiFLLnOJ7k-DqSevIFT5bH_k';
 
 // Fix de íconos predeterminados de Leaflet en Vite/Webpack
 delete L.Icon.Default.prototype._getIconUrl;
@@ -548,10 +545,10 @@ const createAuditBeaconIcon = (beacon) => {
 };
 
 export const CrisisRoomPage = () => {
-  const { 
-    user, 
-    isAdmin: authIsAdmin, 
-    isGestor: authIsGestor, 
+  const {
+    user,
+    isAdmin: authIsAdmin,
+    isGestor: authIsGestor,
     isOperador: authIsOperador,
     canManageShelters: authCanManageShelters,
     canEmitAlerts: authCanEmitAlerts
@@ -565,11 +562,11 @@ export const CrisisRoomPage = () => {
   // Permisos de edición y reubicación en mapa habilitados para Administrador y Operador del COE
   const canManageMapPoints = Boolean(
     user && (
-      authIsAdmin || 
-      authIsOperador || 
+      authIsAdmin ||
+      authIsOperador ||
       authCanManageShelters ||
-      matchR('ADMIN', 'COE', 'SUPERUSER', 'OPERADOR') || 
-      userUsername === 'admin' || 
+      matchR('ADMIN', 'COE', 'SUPERUSER', 'OPERADOR') ||
+      userUsername === 'admin' ||
       user?.is_superuser
     )
   );
@@ -581,7 +578,7 @@ export const CrisisRoomPage = () => {
   const [redHidrica, setRedHidrica] = useState(null);
   const [infraestructuras, setInfraestructuras] = useState(null);
   const [albergues, setAlbergues] = useState(null);
-  
+
   // Cantón activo seleccionado o detectado
   const [activeCanton, setActiveCanton] = useState(CANTONES[0]);
   const [targetFly, setTargetFly] = useState(null);
@@ -667,7 +664,7 @@ export const CrisisRoomPage = () => {
     const focusIncidentId = searchParams.get('focusIncident');
     const focusLat = searchParams.get('lat');
     const focusLon = searchParams.get('lon');
-    const isAudit = searchParams.get('audit') === 'true' || 
+    const isAudit = searchParams.get('audit') === 'true' ||
       ['ATENDIDO', 'DESCARTADO'].includes((searchParams.get('estado') || '').toUpperCase());
 
     if (focusLat && focusLon) {
@@ -756,7 +753,7 @@ export const CrisisRoomPage = () => {
         const timer = setTimeout(() => {
           try {
             marker.openPopup();
-          } catch (e) {}
+          } catch (e) { }
         }, 600);
         return () => {
           clearTimeout(timer);
@@ -1145,7 +1142,7 @@ export const CrisisRoomPage = () => {
   return (
     <ErrorBoundary>
       <div className="relative w-full h-full flex flex-col bg-slate-900 overflow-hidden">
-        
+
         {/* Estilos para animación de la baliza de auditoría territorial (4s) */}
         <style>{`
           @keyframes auditDeplete {
@@ -1163,280 +1160,270 @@ export const CrisisRoomPage = () => {
         {/* ========================================================================= */}
         {topControlsExpanded ? (
           <div className="bg-white/95 dark:bg-crisis-800/95 backdrop-blur-md border-b border-slate-200 dark:border-crisis-700 px-3 md:px-4 py-2 flex flex-wrap items-center justify-between gap-2.5 z-10 shadow-sm animate-in fade-in duration-200">
-          
-          {/* Título & Badge de Monitoreo */}
-          <div className="flex items-center gap-2.5">
-            <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-300 dark:border-emerald-500/20 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span>
-              SALA DE CRISIS COE • RADAR EN VIVO
-            </span>
-            {activeIncidentFeatures.length > 0 && (
-              <span className="flex items-center gap-1.5 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-300 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/40 shadow-sm animate-pulse">
-                <span className="w-2 h-2 rounded-full bg-red-600 dark:bg-red-500"></span>
-                <span>{activeIncidentFeatures.length} {activeIncidentFeatures.length === 1 ? 'Incidente Activo' : 'Incidentes Activos'}</span>
+
+            {/* Título & Badge de Monitoreo */}
+            <div className="flex items-center gap-2.5">
+              <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-300 dark:border-emerald-500/20 shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span>
+                SALA DE CRISIS COE • RADAR EN VIVO
               </span>
-            )}
-            <span className="text-[11px] text-slate-600 dark:text-slate-300 hidden lg:inline font-medium">
-              Provincia de Esmeraldas • Open-Meteo & OpenWeatherMap
-            </span>
-          </div>
-
-          {/* BARRA DE MODOS METEOROLÓGICOS (ESTILO MSN EL TIEMPO) */}
-          <div className="flex items-center bg-slate-100 dark:bg-crisis-900/90 p-1 rounded-xl border border-slate-300 dark:border-crisis-700/80 shadow-inner gap-1 overflow-x-auto max-w-full">
-            <button
-              onClick={() => setWeatherMode('temp')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                weatherMode === 'temp'
-                  ? 'bg-amber-500 text-slate-950 font-black shadow-md ring-1 ring-amber-300'
-                  : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-crisis-800'
-              }`}
-              title="Capa de Temperatura"
-            >
-              <Thermometer className="w-3.5 h-3.5" />
-              <span>Temperatura</span>
-            </button>
-
-            <button
-              onClick={() => setWeatherMode('rain')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                weatherMode === 'rain'
-                  ? 'bg-sky-600 text-white shadow-md ring-1 ring-sky-300'
-                  : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-crisis-800'
-              }`}
-              title="Capa de Precipitaciones y Lluvias"
-            >
-              <Droplets className="w-3.5 h-3.5" />
-              <span>Precipitaciones</span>
-            </button>
-
-            <button
-              onClick={() => setWeatherMode('wind')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                weatherMode === 'wind'
-                  ? 'bg-emerald-600 text-white shadow-md ring-1 ring-emerald-300'
-                  : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-crisis-800'
-              }`}
-              title="Velocidad y Dirección del Viento"
-            >
-              <Wind className="w-3.5 h-3.5" />
-              <span>Viento</span>
-            </button>
-
-            <button
-              onClick={() => setWeatherMode('clouds')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                weatherMode === 'clouds'
-                  ? 'bg-indigo-600 text-white shadow-md ring-1 ring-indigo-300'
-                  : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-crisis-800'
-              }`}
-              title="Nubosidad Satelital"
-            >
-              <Cloud className="w-3.5 h-3.5" />
-              <span>Nubosidad</span>
-            </button>
-
-            <div className="flex items-center gap-1.5 pl-2 ml-1 border-l border-slate-300 dark:border-crisis-700/80">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 hidden xl:inline">
-                Leyenda:
+              {activeIncidentFeatures.length > 0 && (
+                <span className="flex items-center gap-1.5 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-300 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/40 shadow-sm animate-pulse">
+                  <span className="w-2 h-2 rounded-full bg-red-600 dark:bg-red-500"></span>
+                  <span>{activeIncidentFeatures.length} {activeIncidentFeatures.length === 1 ? 'Incidente Activo' : 'Incidentes Activos'}</span>
+                </span>
+              )}
+              <span className="text-[11px] text-slate-600 dark:text-slate-300 hidden lg:inline font-medium">
+                Provincia de Esmeraldas • Open-Meteo & OpenWeatherMap
               </span>
-
-              {/* Checkbox Albergues */}
-              <label 
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer transition select-none ${
-                  layers.albergues ? 'bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30' : 'opacity-60 hover:opacity-100'
-                }`}
-                title="Mostrar u ocultar albergues temporales en el mapa"
-              >
-                <input
-                  type="checkbox"
-                  checked={layers.albergues}
-                  onChange={(e) => setLayers((prev) => ({ ...prev, albergues: e.target.checked }))}
-                  className="w-3.5 h-3.5 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 dark:border-crisis-600 cursor-pointer"
-                />
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm"></span>
-                <span className="font-bold text-[11px] text-slate-800 dark:text-slate-200 whitespace-nowrap">Albergues</span>
-              </label>
-
-              {/* Checkbox Hospitales */}
-              <label 
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer transition select-none ${
-                  layers.hospitales ? 'bg-red-50 dark:bg-red-500/15 border border-red-300 dark:border-red-500/30' : 'opacity-60 hover:opacity-100'
-                }`}
-                title="Mostrar u ocultar hospitales y centros médicos en el mapa"
-              >
-                <input
-                  type="checkbox"
-                  checked={layers.hospitales}
-                  onChange={(e) => setLayers((prev) => ({ ...prev, hospitales: e.target.checked }))}
-                  className="w-3.5 h-3.5 rounded text-red-600 focus:ring-red-500 border-slate-300 dark:border-crisis-600 cursor-pointer"
-                />
-                <span className="w-2.5 h-2.5 rounded-full bg-red-600 shrink-0 shadow-sm"></span>
-                <span className="font-bold text-[11px] text-slate-800 dark:text-slate-200 whitespace-nowrap">Hospitales</span>
-              </label>
-
-              {/* Checkbox Cuerpos de Bomberos */}
-              <label 
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer transition select-none ${
-                  layers.bomberos ? 'bg-amber-50 dark:bg-amber-500/15 border border-amber-300 dark:border-amber-500/30' : 'opacity-60 hover:opacity-100'
-                }`}
-                title="Mostrar u ocultar estaciones de bomberos en el mapa"
-              >
-                <input
-                  type="checkbox"
-                  checked={layers.bomberos}
-                  onChange={(e) => setLayers((prev) => ({ ...prev, bomberos: e.target.checked }))}
-                  className="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 border-slate-300 dark:border-crisis-600 cursor-pointer"
-                />
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-600 shrink-0 shadow-sm"></span>
-                <span className="font-bold text-[11px] text-slate-800 dark:text-slate-200 whitespace-nowrap">Bomberos</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Selector de Mapa Base Ultra-Rápido */}
-          <div className="flex items-center gap-2">
-            <div className="flex bg-slate-100 dark:bg-crisis-900/90 p-0.5 rounded-xl border border-slate-300 dark:border-crisis-700/80 text-xs">
-              <button
-                onClick={() => setBaseMap('calles')}
-                className={`px-2.5 py-1 rounded-lg transition text-[11px] font-bold ${
-                  baseMap === 'calles' ? 'bg-sky-600 text-white shadow-sm ring-1 ring-sky-300' : 'text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
-                }`}
-                title="Esri World Street Map: Libre de marcas de agua, alta definición y carga rápida"
-              >
-                Calles Esri (Recomendado)
-              </button>
-              <button
-                onClick={() => setBaseMap('sat')}
-                className={`px-2.5 py-1 rounded-lg transition text-[11px] font-bold ${
-                  baseMap === 'sat' ? 'bg-sky-600 text-white shadow-sm ring-1 ring-sky-300' : 'text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
-                }`}
-                title="Imágenes Satelitales de Alta Resolución (Esri World Imagery)"
-              >
-                Satelital
-              </button>
-              <button
-                onClick={() => setBaseMap('osm')}
-                className={`px-2.5 py-1 rounded-lg transition text-[11px] font-bold ${
-                  baseMap === 'osm' ? 'bg-sky-600 text-white shadow-sm ring-1 ring-sky-300' : 'text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
-                }`}
-                title="OpenStreetMap Mirror Comunitario"
-              >
-                OSM
-              </button>
             </div>
 
-            <button
-              onClick={async () => {
-                fetchWeatherForCanton(activeCanton);
-                try {
-                  const rep = await reportsApi.getReportes();
-                  if (rep) setIncidentesData(rep);
-                } catch (e) {}
-              }}
-              disabled={loadingWeather}
-              className="p-1.5 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-crisis-700 dark:hover:bg-crisis-600 rounded-lg border border-slate-300 dark:border-crisis-600 transition"
-              title="Refrescar telemetría e incidentes en vivo"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loadingWeather ? 'animate-spin text-sky-500 dark:text-sky-400' : ''}`} />
-            </button>
+            {/* BARRA DE MODOS METEOROLÓGICOS (ESTILO MSN EL TIEMPO) */}
+            <div className="flex items-center bg-slate-100 dark:bg-crisis-900/90 p-1 rounded-xl border border-slate-300 dark:border-crisis-700/80 shadow-inner gap-1 overflow-x-auto max-w-full">
+              <button
+                onClick={() => setWeatherMode('temp')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${weatherMode === 'temp'
+                    ? 'bg-amber-500 text-slate-950 font-black shadow-md ring-1 ring-amber-300'
+                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-crisis-800'
+                  }`}
+                title="Capa de Temperatura"
+              >
+                <Thermometer className="w-3.5 h-3.5" />
+                <span>Temperatura</span>
+              </button>
 
-            {/* Acciones de Creación (Exclusivo Administrador) */}
-            {isAdmin && (
-              <div className="flex items-center gap-1.5 pl-2 border-l border-slate-300 dark:border-crisis-700">
-                <button
-                  onClick={() => {
-                    const centerLat = mapCenterCoords ? mapCenterCoords[0] : (activeCanton?.lat || ESMERALDAS_CENTER[0]);
-                    const centerLon = mapCenterCoords ? mapCenterCoords[1] : (activeCanton?.lon || ESMERALDAS_CENTER[1]);
-                    setInfraForm({
-                      nombre: '',
-                      tipo: 'HOSPITAL',
-                      direccion: 'Av. Libertad y Calle 10, Esmeraldas',
-                      telefono_contacto: '062723000',
-                      contacto_responsable: 'Dr. Roberto Estupiñán',
-                      capacidad_atencion: 120,
-                      lat: Number(centerLat.toFixed(5)),
-                      lon: Number(centerLon.toFixed(5)),
-                    });
-                    setShowCreateInfraModal(true);
-                  }}
-                  className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-[11px] rounded-lg shadow flex items-center gap-1 transition active:scale-95"
-                  title="Registrar nuevo hospital en la base de datos"
+              <button
+                onClick={() => setWeatherMode('rain')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${weatherMode === 'rain'
+                    ? 'bg-sky-600 text-white shadow-md ring-1 ring-sky-300'
+                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-crisis-800'
+                  }`}
+                title="Capa de Precipitaciones y Lluvias"
+              >
+                <Droplets className="w-3.5 h-3.5" />
+                <span>Precipitaciones</span>
+              </button>
+
+              <button
+                onClick={() => setWeatherMode('wind')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${weatherMode === 'wind'
+                    ? 'bg-emerald-600 text-white shadow-md ring-1 ring-emerald-300'
+                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-crisis-800'
+                  }`}
+                title="Velocidad y Dirección del Viento"
+              >
+                <Wind className="w-3.5 h-3.5" />
+                <span>Viento</span>
+              </button>
+
+              <button
+                onClick={() => setWeatherMode('clouds')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${weatherMode === 'clouds'
+                    ? 'bg-indigo-600 text-white shadow-md ring-1 ring-indigo-300'
+                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-crisis-800'
+                  }`}
+                title="Nubosidad Satelital"
+              >
+                <Cloud className="w-3.5 h-3.5" />
+                <span>Nubosidad</span>
+              </button>
+
+              <div className="flex items-center gap-1.5 pl-2 ml-1 border-l border-slate-300 dark:border-crisis-700/80">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 hidden xl:inline">
+                  Leyenda:
+                </span>
+
+                {/* Checkbox Albergues */}
+                <label
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer transition select-none ${layers.albergues ? 'bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30' : 'opacity-60 hover:opacity-100'
+                    }`}
+                  title="Mostrar u ocultar albergues temporales en el mapa"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>+ Hospital</span>
+                  <input
+                    type="checkbox"
+                    checked={layers.albergues}
+                    onChange={(e) => setLayers((prev) => ({ ...prev, albergues: e.target.checked }))}
+                    className="w-3.5 h-3.5 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 dark:border-crisis-600 cursor-pointer"
+                  />
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm"></span>
+                  <span className="font-bold text-[11px] text-slate-800 dark:text-slate-200 whitespace-nowrap">Albergues</span>
+                </label>
+
+                {/* Checkbox Hospitales */}
+                <label
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer transition select-none ${layers.hospitales ? 'bg-red-50 dark:bg-red-500/15 border border-red-300 dark:border-red-500/30' : 'opacity-60 hover:opacity-100'
+                    }`}
+                  title="Mostrar u ocultar hospitales y centros médicos en el mapa"
+                >
+                  <input
+                    type="checkbox"
+                    checked={layers.hospitales}
+                    onChange={(e) => setLayers((prev) => ({ ...prev, hospitales: e.target.checked }))}
+                    className="w-3.5 h-3.5 rounded text-red-600 focus:ring-red-500 border-slate-300 dark:border-crisis-600 cursor-pointer"
+                  />
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-600 shrink-0 shadow-sm"></span>
+                  <span className="font-bold text-[11px] text-slate-800 dark:text-slate-200 whitespace-nowrap">Hospitales</span>
+                </label>
+
+                {/* Checkbox Cuerpos de Bomberos */}
+                <label
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer transition select-none ${layers.bomberos ? 'bg-amber-50 dark:bg-amber-500/15 border border-amber-300 dark:border-amber-500/30' : 'opacity-60 hover:opacity-100'
+                    }`}
+                  title="Mostrar u ocultar estaciones de bomberos en el mapa"
+                >
+                  <input
+                    type="checkbox"
+                    checked={layers.bomberos}
+                    onChange={(e) => setLayers((prev) => ({ ...prev, bomberos: e.target.checked }))}
+                    className="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 border-slate-300 dark:border-crisis-600 cursor-pointer"
+                  />
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-600 shrink-0 shadow-sm"></span>
+                  <span className="font-bold text-[11px] text-slate-800 dark:text-slate-200 whitespace-nowrap">Bomberos</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Selector de Mapa Base Ultra-Rápido */}
+            <div className="flex items-center gap-2">
+              <div className="flex bg-slate-100 dark:bg-crisis-900/90 p-0.5 rounded-xl border border-slate-300 dark:border-crisis-700/80 text-xs">
+                <button
+                  onClick={() => setBaseMap('calles')}
+                  className={`px-2.5 py-1 rounded-lg transition text-[11px] font-bold ${baseMap === 'calles' ? 'bg-sky-600 text-white shadow-sm ring-1 ring-sky-300' : 'text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
+                    }`}
+                  title="Esri World Street Map: Libre de marcas de agua, alta definición y carga rápida"
+                >
+                  Calles Esri (Recomendado)
                 </button>
-
                 <button
-                  onClick={() => {
-                    const centerLat = mapCenterCoords ? mapCenterCoords[0] : (activeCanton?.lat || ESMERALDAS_CENTER[0]);
-                    const centerLon = mapCenterCoords ? mapCenterCoords[1] : (activeCanton?.lon || ESMERALDAS_CENTER[1]);
-                    setInfraForm({
-                      nombre: '',
-                      tipo: 'BOMBEROS',
-                      direccion: 'Calle Sucre y Rocafuerte, Esmeraldas',
-                      telefono_contacto: '062720102',
-                      contacto_responsable: 'Cmdte. Miguel Perea',
-                      capacidad_atencion: 45,
-                      lat: Number(centerLat.toFixed(5)),
-                      lon: Number(centerLon.toFixed(5)),
-                    });
-                    setShowCreateInfraModal(true);
-                  }}
-                  className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold text-[11px] rounded-lg shadow flex items-center gap-1 transition active:scale-95"
-                  title="Registrar nueva estación de bomberos en la base de datos"
+                  onClick={() => setBaseMap('sat')}
+                  className={`px-2.5 py-1 rounded-lg transition text-[11px] font-bold ${baseMap === 'sat' ? 'bg-sky-600 text-white shadow-sm ring-1 ring-sky-300' : 'text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
+                    }`}
+                  title="Imágenes Satelitales de Alta Resolución (Esri World Imagery)"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>+ Bomberos</span>
+                  Satelital
+                </button>
+                <button
+                  onClick={() => setBaseMap('osm')}
+                  className={`px-2.5 py-1 rounded-lg transition text-[11px] font-bold ${baseMap === 'osm' ? 'bg-sky-600 text-white shadow-sm ring-1 ring-sky-300' : 'text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
+                    }`}
+                  title="OpenStreetMap Mirror Comunitario"
+                >
+                  OSM
                 </button>
               </div>
-            )}
 
-            {/* Botón Retraer Barra Superior (Expandir Mapa) */}
+              <button
+                onClick={async () => {
+                  fetchWeatherForCanton(activeCanton);
+                  try {
+                    const rep = await reportsApi.getReportes();
+                    if (rep) setIncidentesData(rep);
+                  } catch (e) { }
+                }}
+                disabled={loadingWeather}
+                className="p-1.5 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-crisis-700 dark:hover:bg-crisis-600 rounded-lg border border-slate-300 dark:border-crisis-600 transition"
+                title="Refrescar telemetría e incidentes en vivo"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingWeather ? 'animate-spin text-sky-500 dark:text-sky-400' : ''}`} />
+              </button>
+
+              {/* Acciones de Creación (Exclusivo Administrador) */}
+              {isAdmin && (
+                <div className="flex items-center gap-1.5 pl-2 border-l border-slate-300 dark:border-crisis-700">
+                  <button
+                    onClick={() => {
+                      const centerLat = mapCenterCoords ? mapCenterCoords[0] : (activeCanton?.lat || ESMERALDAS_CENTER[0]);
+                      const centerLon = mapCenterCoords ? mapCenterCoords[1] : (activeCanton?.lon || ESMERALDAS_CENTER[1]);
+                      setInfraForm({
+                        nombre: '',
+                        tipo: 'HOSPITAL',
+                        direccion: 'Av. Libertad y Calle 10, Esmeraldas',
+                        telefono_contacto: '062723000',
+                        contacto_responsable: 'Dr. Roberto Estupiñán',
+                        capacidad_atencion: 120,
+                        lat: Number(centerLat.toFixed(5)),
+                        lon: Number(centerLon.toFixed(5)),
+                      });
+                      setShowCreateInfraModal(true);
+                    }}
+                    className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-[11px] rounded-lg shadow flex items-center gap-1 transition active:scale-95"
+                    title="Registrar nuevo hospital en la base de datos"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Hospital</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const centerLat = mapCenterCoords ? mapCenterCoords[0] : (activeCanton?.lat || ESMERALDAS_CENTER[0]);
+                      const centerLon = mapCenterCoords ? mapCenterCoords[1] : (activeCanton?.lon || ESMERALDAS_CENTER[1]);
+                      setInfraForm({
+                        nombre: '',
+                        tipo: 'BOMBEROS',
+                        direccion: 'Calle Sucre y Rocafuerte, Esmeraldas',
+                        telefono_contacto: '062720102',
+                        contacto_responsable: 'Cmdte. Miguel Perea',
+                        capacidad_atencion: 45,
+                        lat: Number(centerLat.toFixed(5)),
+                        lon: Number(centerLon.toFixed(5)),
+                      });
+                      setShowCreateInfraModal(true);
+                    }}
+                    className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold text-[11px] rounded-lg shadow flex items-center gap-1 transition active:scale-95"
+                    title="Registrar nueva estación de bomberos en la base de datos"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Bomberos</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Botón Retraer Barra Superior (Expandir Mapa) */}
+              <button
+                onClick={() => setTopControlsExpanded(false)}
+                className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-crisis-700/80 dark:hover:bg-crisis-700 rounded-lg transition border border-slate-300 dark:border-crisis-600 flex items-center gap-1 shrink-0 ml-1 shadow-sm active:scale-95"
+                title="Retraer controles superiores para expandir el mapa"
+              >
+                <ChevronUp className="w-3.5 h-3.5 text-sky-500" />
+                <span className="text-[10px] font-bold hidden xl:inline">Retraer</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white/95 dark:bg-crisis-800/95 backdrop-blur-md border-b border-slate-200 dark:border-crisis-700 px-3 md:px-4 py-1.5 flex items-center justify-between gap-2 z-10 shadow-sm animate-in fade-in duration-200">
+            {/* Título & Badge de Monitoreo Compacto */}
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-lg border border-emerald-300 dark:border-emerald-500/20 shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span>
+                <span>SALA DE CRISIS COE • RADAR EN VIVO</span>
+              </span>
+
+              {/* Indicador de Capa Activa */}
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-crisis-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-crisis-700 flex items-center gap-1">
+                {weatherMode === 'temp' && <Thermometer className="w-3 h-3 text-amber-500" />}
+                {weatherMode === 'rain' && <Droplets className="w-3 h-3 text-sky-500" />}
+                {weatherMode === 'wind' && <Wind className="w-3 h-3 text-emerald-500" />}
+                {weatherMode === 'clouds' && <Cloud className="w-3 h-3 text-indigo-500" />}
+                <span className="capitalize">{weatherMode === 'temp' ? 'Temperatura' : weatherMode === 'rain' ? 'Precipitaciones' : weatherMode === 'wind' ? 'Viento' : 'Nubosidad'}</span>
+              </span>
+
+              {/* Indicador de Mapa Base */}
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 hidden sm:inline">
+                Base: <span className="font-bold text-slate-700 dark:text-slate-200 capitalize">{baseMap}</span>
+              </span>
+            </div>
+
+            {/* Botón Expandir Controles */}
             <button
-              onClick={() => setTopControlsExpanded(false)}
-              className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-crisis-700/80 dark:hover:bg-crisis-700 rounded-lg transition border border-slate-300 dark:border-crisis-600 flex items-center gap-1 shrink-0 ml-1 shadow-sm active:scale-95"
-              title="Retraer controles superiores para expandir el mapa"
+              onClick={() => setTopControlsExpanded(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs transition shadow-sm active:scale-95"
+              title="Expandir controles superiores del radar y mapa"
             >
-              <ChevronUp className="w-3.5 h-3.5 text-sky-500" />
-              <span className="text-[10px] font-bold hidden xl:inline">Retraer</span>
+              <span>Expandir Controles</span>
+              <ChevronDown className="w-3.5 h-3.5" />
             </button>
           </div>
-        </div>
-      ) : (
-        <div className="bg-white/95 dark:bg-crisis-800/95 backdrop-blur-md border-b border-slate-200 dark:border-crisis-700 px-3 md:px-4 py-1.5 flex items-center justify-between gap-2 z-10 shadow-sm animate-in fade-in duration-200">
-          {/* Título & Badge de Monitoreo Compacto */}
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-lg border border-emerald-300 dark:border-emerald-500/20 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span>
-              <span>SALA DE CRISIS COE • RADAR EN VIVO</span>
-            </span>
-
-            {/* Indicador de Capa Activa */}
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-crisis-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-crisis-700 flex items-center gap-1">
-              {weatherMode === 'temp' && <Thermometer className="w-3 h-3 text-amber-500" />}
-              {weatherMode === 'rain' && <Droplets className="w-3 h-3 text-sky-500" />}
-              {weatherMode === 'wind' && <Wind className="w-3 h-3 text-emerald-500" />}
-              {weatherMode === 'clouds' && <Cloud className="w-3 h-3 text-indigo-500" />}
-              <span className="capitalize">{weatherMode === 'temp' ? 'Temperatura' : weatherMode === 'rain' ? 'Precipitaciones' : weatherMode === 'wind' ? 'Viento' : 'Nubosidad'}</span>
-            </span>
-
-            {/* Indicador de Mapa Base */}
-            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 hidden sm:inline">
-              Base: <span className="font-bold text-slate-700 dark:text-slate-200 capitalize">{baseMap}</span>
-            </span>
-          </div>
-
-          {/* Botón Expandir Controles */}
-          <button
-            onClick={() => setTopControlsExpanded(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs transition shadow-sm active:scale-95"
-            title="Expandir controles superiores del radar y mapa"
-          >
-            <span>Expandir Controles</span>
-            <ChevronDown className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+        )}
 
         {/* ========================================================================= */}
         {/* MAPA PRINCIPAL LEAFLET CON RENDIMIENTO DE TESELAS OPTIMIZADO */}
@@ -1453,8 +1440,8 @@ export const CrisisRoomPage = () => {
             className="w-full h-full"
           >
             {/* Controlador de movimiento de mapa para autodetección de cantón */}
-            <MapController 
-              onCenterChange={handleMapCenterChanged} 
+            <MapController
+              onCenterChange={handleMapCenterChanged}
               targetFly={targetFly}
             />
 
@@ -1462,7 +1449,7 @@ export const CrisisRoomPage = () => {
             {baseMap === 'carto' && (
               <TileLayer
                 attribution='&copy; <a href="https://carto.com/">CARTO</a>, &copy; OpenStreetMap'
-                url={`https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=${CARTO_API_KEY}`}
+                url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
                 subdomains={['a', 'b', 'c', 'd']}
                 maxZoom={19}
                 keepBuffer={12}
@@ -1579,9 +1566,9 @@ export const CrisisRoomPage = () => {
               const albId = feature.id || p.id || (i + 1);
               const pct = Math.round((p.ocupacion_actual / (p.capacidad_maxima || 1)) * 100);
               return (
-                <Marker 
-                  key={`alb-${albId}`} 
-                  position={[coords[1], coords[0]]} 
+                <Marker
+                  key={`alb-${albId}`}
+                  position={[coords[1], coords[0]]}
                   icon={createShelterMarker(pct, p.nombre, isAdmin)}
                   draggable={isAdmin}
                   eventHandlers={{
@@ -1616,10 +1603,9 @@ export const CrisisRoomPage = () => {
                           </span>
                         </div>
                         <div className="w-full bg-slate-200 dark:bg-slate-700/80 h-2 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full transition-all duration-300 ${
-                              pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-emerald-500'
-                            }`} 
+                          <div
+                            className={`h-full transition-all duration-300 ${pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-emerald-500'
+                              }`}
                             style={{ width: `${Math.min(pct, 100)}%` }}
                           ></div>
                         </div>
@@ -1684,9 +1670,9 @@ export const CrisisRoomPage = () => {
               if (!isBombero && !layers.hospitales) return null;
 
               return (
-                <Marker 
-                  key={`inf-${infraId}`} 
-                  position={[coords[1], coords[0]]} 
+                <Marker
+                  key={`inf-${infraId}`}
+                  position={[coords[1], coords[0]]}
                   icon={createHospitalMarker(p.tipo, isAdmin)}
                   draggable={isAdmin}
                   eventHandlers={{
@@ -1697,11 +1683,10 @@ export const CrisisRoomPage = () => {
                     <div className="text-xs space-y-2 min-w-[240px] max-w-[280px] p-1 text-slate-800 dark:text-slate-200">
                       {/* Cabecera Tipo y Badge Admin */}
                       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700/80 pb-1.5">
-                        <span className={`font-black uppercase tracking-wider text-[10px] flex items-center gap-1.5 ${
-                          isBombero
+                        <span className={`font-black uppercase tracking-wider text-[10px] flex items-center gap-1.5 ${isBombero
                             ? 'text-amber-600 dark:text-amber-400'
                             : 'text-red-600 dark:text-red-400'
-                        }`}>
+                          }`}>
                           {isBombero ? '🚒 CUERPO DE BOMBEROS' : '🏥 HOSPITAL / CENTRO MÉDICO'}
                         </span>
                         {isAdmin && (
@@ -1838,154 +1823,152 @@ export const CrisisRoomPage = () => {
                     key={`incident-marker-${incId}`}
                     position={[lat, lon]}
                     icon={createIncidentMarker(gravedad, p.tipo_evento, isSelected)}
-                  ref={(markerInstance) => {
-                    if (markerInstance) {
-                      incidentMarkerRefs.current[incId] = markerInstance;
-                    } else {
-                      delete incidentMarkerRefs.current[incId];
-                    }
-                  }}
-                  eventHandlers={{
-                    click: () => {
-                      setSelectedIncidentId(incId);
-                    },
-                    popupopen: () => {
-                      setSelectedIncidentId(incId);
-                    },
-                    popupclose: () => {
-                      setSelectedIncidentId(null);
-                    },
-                  }}
-                >
-                  <Popup 
-                    minWidth={270} 
-                    maxWidth={340}
-                    autoClose={true}
-                    closeOnClick={true}
+                    ref={(markerInstance) => {
+                      if (markerInstance) {
+                        incidentMarkerRefs.current[incId] = markerInstance;
+                      } else {
+                        delete incidentMarkerRefs.current[incId];
+                      }
+                    }}
+                    eventHandlers={{
+                      click: () => {
+                        setSelectedIncidentId(incId);
+                      },
+                      popupopen: () => {
+                        setSelectedIncidentId(incId);
+                      },
+                      popupclose: () => {
+                        setSelectedIncidentId(null);
+                      },
+                    }}
                   >
-                    <div className="text-xs space-y-2 p-1 text-slate-800 dark:text-slate-200">
-                      {/* Cabecera: Tipo de evento y Nivel de Gravedad */}
-                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700/80 pb-1.5 pr-6">
-                        <span className="font-extrabold text-sm uppercase tracking-wide text-slate-900 dark:text-white flex items-center gap-1.5">
-                          <AlertTriangle className={`w-4 h-4 shrink-0 ${
-                            gravedad === 'CRITICO' ? 'text-red-600 dark:text-red-500 animate-pulse' :
-                            gravedad === 'ALTO' ? 'text-orange-500' :
-                            gravedad === 'MEDIO' ? 'text-amber-500' : 'text-emerald-500'
-                          }`} />
-                          <span>{p.tipo_evento?.replace(/_/g, ' ') || 'INCIDENTE'}</span>
-                        </span>
-                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase border ${
-                          gravedad === 'CRITICO'
-                            ? 'bg-red-100 text-red-800 border-red-300 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/40 shadow-sm'
-                            : gravedad === 'ALTO'
-                            ? 'bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-500/40'
-                            : gravedad === 'MEDIO'
-                            ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40'
-                            : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40'
-                        }`}>
-                          {gravedad}
-                        </span>
-                      </div>
-
-                      {/* Informante y Estado */}
-                      <div className="bg-slate-100 dark:bg-slate-800/80 p-2 rounded-lg space-y-1 border border-slate-200 dark:border-slate-700/60">
-                        <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-medium">
-                          <User className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400 shrink-0" />
-                          <span>Informante: <strong className="text-slate-900 dark:text-white">{informante}</strong></span>
+                    <Popup
+                      minWidth={270}
+                      maxWidth={340}
+                      autoClose={true}
+                      closeOnClick={true}
+                    >
+                      <div className="text-xs space-y-2 p-1 text-slate-800 dark:text-slate-200">
+                        {/* Cabecera: Tipo de evento y Nivel de Gravedad */}
+                        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700/80 pb-1.5 pr-6">
+                          <span className="font-extrabold text-sm uppercase tracking-wide text-slate-900 dark:text-white flex items-center gap-1.5">
+                            <AlertTriangle className={`w-4 h-4 shrink-0 ${gravedad === 'CRITICO' ? 'text-red-600 dark:text-red-500 animate-pulse' :
+                                gravedad === 'ALTO' ? 'text-orange-500' :
+                                  gravedad === 'MEDIO' ? 'text-amber-500' : 'text-emerald-500'
+                              }`} />
+                            <span>{p.tipo_evento?.replace(/_/g, ' ') || 'INCIDENTE'}</span>
+                          </span>
+                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase border ${gravedad === 'CRITICO'
+                              ? 'bg-red-100 text-red-800 border-red-300 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/40 shadow-sm'
+                              : gravedad === 'ALTO'
+                                ? 'bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-500/40'
+                                : gravedad === 'MEDIO'
+                                  ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40'
+                                  : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40'
+                            }`}>
+                            {gravedad}
+                          </span>
                         </div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
-                          <span>Estado: <strong className="text-sky-600 dark:text-sky-400 font-bold">{estado}</strong></span>
-                          {p.sincronizado_offline && (
-                            <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                              <span>📡</span> Sincronizado Offline
-                            </span>
-                          )}
-                        </div>
-                      </div>
 
-                      {/* Descripción */}
-                      {p.descripcion && (
-                        <p className="text-slate-700 dark:text-slate-300 text-xs leading-relaxed italic bg-amber-50/70 dark:bg-amber-950/25 p-2 rounded-lg border border-amber-200/70 dark:border-amber-800/40">
-                          "{p.descripcion}"
-                        </p>
-                      )}
-
-                      {/* Métricas de Afectación */}
-                      <div className="grid grid-cols-2 gap-2 text-[11px]">
-                        <div className="bg-slate-100 dark:bg-slate-800/90 p-2 rounded-lg text-center border border-slate-200 dark:border-slate-700/60">
-                          <span className="block text-slate-500 dark:text-slate-400 text-[10px]">Atrapadas</span>
-                          <strong className="text-red-600 dark:text-red-400 text-sm font-black">{p.personas_atrapadas || 0}</strong>
-                        </div>
-                        <div className="bg-slate-100 dark:bg-slate-800/90 p-2 rounded-lg text-center border border-slate-200 dark:border-slate-700/60">
-                          <span className="block text-slate-500 dark:text-slate-400 text-[10px]">Familias Afectadas</span>
-                          <strong className="text-slate-900 dark:text-slate-100 text-sm font-black">{p.familias_afectadas || 0}</strong>
-                        </div>
-                      </div>
-
-                      {/* Cruce Geoespacial PostGIS de Afectación Inmediata con Familias Censadas */}
-                      {(Number(p.personas_afectadas_estimadas) > 0 || Number(p.familias_en_perimetro) > 0) && (
-                        <div className="bg-purple-50 dark:bg-purple-950/40 p-2 rounded-lg border border-purple-200 dark:border-purple-800/60 text-[11px] space-y-1">
-                          <div className="flex justify-between items-center text-purple-950 dark:text-purple-300 font-extrabold">
-                            <span>Perímetro PostGIS ({Math.round(p.radio_analisis_metros || 25)}m):</span>
-                            <span className="px-1.5 py-0.5 rounded bg-purple-200 dark:bg-purple-900/60 text-purple-950 dark:text-purple-200 font-black">
-                              {p.personas_afectadas_estimadas} pers. ({p.familias_en_perimetro} fam.)
-                            </span>
+                        {/* Informante y Estado */}
+                        <div className="bg-slate-100 dark:bg-slate-800/80 p-2 rounded-lg space-y-1 border border-slate-200 dark:border-slate-700/60">
+                          <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-medium">
+                            <User className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400 shrink-0" />
+                            <span>Informante: <strong className="text-slate-900 dark:text-white">{informante}</strong></span>
                           </div>
-                          {(Number(p.ninos_en_riesgo) > 0 || Number(p.adultos_mayores_riesgo) > 0 || Number(p.discapacitados_riesgo) > 0) && (
-                            <p className="text-[10px] text-purple-900 dark:text-purple-300 font-bold">
-                              • {p.ninos_en_riesgo || 0} niños &lt;5 | {p.adultos_mayores_riesgo || 0} ancianos | {p.discapacitados_riesgo || 0} disc.
-                            </p>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                            <span>Estado: <strong className="text-sky-600 dark:text-sky-400 font-bold">{estado}</strong></span>
+                            {p.sincronizado_offline && (
+                              <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                                <span>📡</span> Sincronizado Offline
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Descripción */}
+                        {p.descripcion && (
+                          <p className="text-slate-700 dark:text-slate-300 text-xs leading-relaxed italic bg-amber-50/70 dark:bg-amber-950/25 p-2 rounded-lg border border-amber-200/70 dark:border-amber-800/40">
+                            "{p.descripcion}"
+                          </p>
+                        )}
+
+                        {/* Métricas de Afectación */}
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          <div className="bg-slate-100 dark:bg-slate-800/90 p-2 rounded-lg text-center border border-slate-200 dark:border-slate-700/60">
+                            <span className="block text-slate-500 dark:text-slate-400 text-[10px]">Atrapadas</span>
+                            <strong className="text-red-600 dark:text-red-400 text-sm font-black">{p.personas_atrapadas || 0}</strong>
+                          </div>
+                          <div className="bg-slate-100 dark:bg-slate-800/90 p-2 rounded-lg text-center border border-slate-200 dark:border-slate-700/60">
+                            <span className="block text-slate-500 dark:text-slate-400 text-[10px]">Familias Afectadas</span>
+                            <strong className="text-slate-900 dark:text-slate-100 text-sm font-black">{p.familias_afectadas || 0}</strong>
+                          </div>
+                        </div>
+
+                        {/* Cruce Geoespacial PostGIS de Afectación Inmediata con Familias Censadas */}
+                        {(Number(p.personas_afectadas_estimadas) > 0 || Number(p.familias_en_perimetro) > 0) && (
+                          <div className="bg-purple-50 dark:bg-purple-950/40 p-2 rounded-lg border border-purple-200 dark:border-purple-800/60 text-[11px] space-y-1">
+                            <div className="flex justify-between items-center text-purple-950 dark:text-purple-300 font-extrabold">
+                              <span>Perímetro PostGIS ({Math.round(p.radio_analisis_metros || 25)}m):</span>
+                              <span className="px-1.5 py-0.5 rounded bg-purple-200 dark:bg-purple-900/60 text-purple-950 dark:text-purple-200 font-black">
+                                {p.personas_afectadas_estimadas} pers. ({p.familias_en_perimetro} fam.)
+                              </span>
+                            </div>
+                            {(Number(p.ninos_en_riesgo) > 0 || Number(p.adultos_mayores_riesgo) > 0 || Number(p.discapacitados_riesgo) > 0) && (
+                              <p className="text-[10px] text-purple-900 dark:text-purple-300 font-bold">
+                                • {p.ninos_en_riesgo || 0} niños &lt;5 | {p.adultos_mayores_riesgo || 0} ancianos | {p.discapacitados_riesgo || 0} disc.
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Coordenadas GPS y Hora */}
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono space-y-0.5 border-t border-slate-200 dark:border-slate-700/60 pt-1.5 flex items-center justify-between">
+                          <span>GPS: {lat.toFixed(5)}, {lon.toFixed(5)}</span>
+                          {p.fecha_incidente && (
+                            <span>{new Date(p.fecha_incidente).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                           )}
                         </div>
-                      )}
 
-                      {/* Coordenadas GPS y Hora */}
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono space-y-0.5 border-t border-slate-200 dark:border-slate-700/60 pt-1.5 flex items-center justify-between">
-                        <span>GPS: {lat.toFixed(5)}, {lon.toFixed(5)}</span>
-                        {p.fecha_incidente && (
-                          <span>{new Date(p.fecha_incidente).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        )}
+                        {/* Botones de Acción */}
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const marker = incidentMarkerRefs.current[incId];
+                              if (marker) marker.closePopup();
+                              setSelectedIncidentId(null);
+                              if (searchParams.get('focusIncident')) {
+                                const newParams = new URLSearchParams(searchParams);
+                                newParams.delete('focusIncident');
+                                newParams.delete('lat');
+                                newParams.delete('lon');
+                                setSearchParams(newParams, { replace: true });
+                              }
+                            }}
+                            className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 shadow-sm"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>Cerrar</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const marker = incidentMarkerRefs.current[incId];
+                              if (marker) marker.closePopup();
+                              setSelectedIncidentId(null);
+                              navigate('/incidentes');
+                            }}
+                            className="flex-1 py-1.5 bg-sky-600 hover:bg-sky-500 active:scale-98 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>Gestionar Incidente</span>
+                          </button>
+                        </div>
                       </div>
-
-                      {/* Botones de Acción */}
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const marker = incidentMarkerRefs.current[incId];
-                            if (marker) marker.closePopup();
-                            setSelectedIncidentId(null);
-                            if (searchParams.get('focusIncident')) {
-                              const newParams = new URLSearchParams(searchParams);
-                              newParams.delete('focusIncident');
-                              newParams.delete('lat');
-                              newParams.delete('lon');
-                              setSearchParams(newParams, { replace: true });
-                            }
-                          }}
-                          className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 shadow-sm"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                          <span>Cerrar</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const marker = incidentMarkerRefs.current[incId];
-                            if (marker) marker.closePopup();
-                            setSelectedIncidentId(null);
-                            navigate('/incidentes');
-                          }}
-                          className="flex-1 py-1.5 bg-sky-600 hover:bg-sky-500 active:scale-98 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          <span>Gestionar Incidente</span>
-                        </button>
-                      </div>
-                    </div>
-                  </Popup>
-                </Marker>
-              </React.Fragment>
+                    </Popup>
+                  </Marker>
+                </React.Fragment>
               );
             })}
 
@@ -2001,10 +1984,9 @@ export const CrisisRoomPage = () => {
 
           {/* TOAST DE AUDITORÍA TERRITORIAL DE CASO RESUELTO (4 SEGUNDOS) */}
           {auditBeacon && (
-            <div 
-              className={`absolute top-4 left-1/2 -translate-x-1/2 z-[1200] px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xl backdrop-blur-xl border border-emerald-500/60 bg-slate-900/95 text-white ring-2 ring-emerald-500/30 transition-all duration-700 flex items-center gap-3 ${
-                auditBeacon.fading ? 'opacity-0 -translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100'
-              }`}
+            <div
+              className={`absolute top-4 left-1/2 -translate-x-1/2 z-[1200] px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xl backdrop-blur-xl border border-emerald-500/60 bg-slate-900/95 text-white ring-2 ring-emerald-500/30 transition-all duration-700 flex items-center gap-3 ${auditBeacon.fading ? 'opacity-0 -translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100'
+                }`}
             >
               <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
                 <ShieldCheck className="w-4 h-4 animate-pulse" />
@@ -2023,11 +2005,10 @@ export const CrisisRoomPage = () => {
 
           {/* TOAST DE REUBICACIÓN EN BASE DE DATOS */}
           {saveStatus && (
-            <div className={`absolute top-4 left-1/2 -translate-x-1/2 z-[1200] px-4 py-2.5 rounded-xl text-xs font-bold shadow-2xl backdrop-blur-md border animate-in fade-in slide-in-from-top-4 duration-300 flex items-center gap-2 ${
-              saveStatus.type === 'success'
+            <div className={`absolute top-4 left-1/2 -translate-x-1/2 z-[1200] px-4 py-2.5 rounded-xl text-xs font-bold shadow-2xl backdrop-blur-md border animate-in fade-in slide-in-from-top-4 duration-300 flex items-center gap-2 ${saveStatus.type === 'success'
                 ? 'bg-emerald-950/95 border-emerald-500/60 text-emerald-200 ring-2 ring-emerald-500/30'
                 : 'bg-red-950/95 border-red-500/60 text-red-200'
-            }`}>
+              }`}>
               <span>{saveStatus.text}</span>
             </div>
           )}
@@ -2036,12 +2017,12 @@ export const CrisisRoomPage = () => {
           {/* CONSOLA INFERIOR UNIFICADA: TELEMETRÍA DINÁMICA & TIMELINE MSN EL TIEMPO */}
           {/* ========================================================================= */}
           <div className="absolute bottom-2 left-2 right-2 lg:right-52 z-[1000] flex flex-col gap-1.5 pointer-events-none">
-            
+
             <div className="pointer-events-auto bg-white/95 dark:bg-crisis-800/95 backdrop-blur-md border border-slate-200 dark:border-crisis-700/80 rounded-2xl p-2.5 shadow-2xl space-y-2">
-              
+
               {/* FILA 1: CANTÓN ACTIVO, CHIPS SELECTORES Y BADGES DE TELEMETRÍA */}
               <div className="flex flex-wrap items-center justify-between gap-2">
-                
+
                 {/* Cantón Activo */}
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-500/15 border border-sky-300 dark:border-sky-500/25 flex items-center justify-center shrink-0 shadow-inner">
@@ -2076,11 +2057,10 @@ export const CrisisRoomPage = () => {
                     <button
                       key={c.id}
                       onClick={() => handleSelectCanton(c)}
-                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition whitespace-nowrap ${
-                        activeCanton.id === c.id
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition whitespace-nowrap ${activeCanton.id === c.id
                           ? 'bg-sky-600 text-white shadow-sm ring-1 ring-sky-300'
                           : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-crisis-700/70'
-                      }`}
+                        }`}
                     >
                       {c.shortName}
                     </button>
@@ -2090,11 +2070,10 @@ export const CrisisRoomPage = () => {
                 {/* Métricas en Tiempo Real (Resaltando el modo meteorológico seleccionado) */}
                 <div className="flex items-center gap-1.5 text-xs overflow-x-auto max-w-full pb-0.5">
                   {/* Temp */}
-                  <div className={`px-2 py-1 rounded-lg border transition ${
-                    weatherMode === 'temp'
+                  <div className={`px-2 py-1 rounded-lg border transition ${weatherMode === 'temp'
                       ? 'bg-amber-100 text-amber-900 border-amber-400 dark:bg-amber-500/20 dark:border-amber-500/60 dark:text-amber-300 shadow-md ring-1 ring-amber-400/40'
                       : 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-crisis-900/80 dark:border-crisis-700 dark:text-slate-300'
-                  }`}>
+                    }`}>
                     <div className="flex items-center gap-1">
                       <Thermometer className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
                       <span className="text-[10px] text-slate-500 dark:text-slate-400">Temp</span>
@@ -2103,11 +2082,10 @@ export const CrisisRoomPage = () => {
                   </div>
 
                   {/* Lluvia */}
-                  <div className={`px-2 py-1 rounded-lg border transition ${
-                    weatherMode === 'rain'
+                  <div className={`px-2 py-1 rounded-lg border transition ${weatherMode === 'rain'
                       ? 'bg-sky-100 text-sky-900 border-sky-400 dark:bg-sky-500/20 dark:border-sky-500/60 dark:text-sky-300 shadow-md ring-1 ring-sky-400/40'
                       : 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-crisis-900/80 dark:border-crisis-700 dark:text-slate-300'
-                  }`}>
+                    }`}>
                     <div className="flex items-center gap-1">
                       <Droplets className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
                       <span className="text-[10px] text-slate-500 dark:text-slate-400">Lluvia</span>
@@ -2116,11 +2094,10 @@ export const CrisisRoomPage = () => {
                   </div>
 
                   {/* Viento */}
-                  <div className={`px-2 py-1 rounded-lg border transition ${
-                    weatherMode === 'wind'
+                  <div className={`px-2 py-1 rounded-lg border transition ${weatherMode === 'wind'
                       ? 'bg-emerald-100 text-emerald-900 border-emerald-400 dark:bg-emerald-500/20 dark:border-emerald-500/60 dark:text-emerald-300 shadow-md ring-1 ring-emerald-400/40'
                       : 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-crisis-900/80 dark:border-crisis-700 dark:text-slate-300'
-                  }`}>
+                    }`}>
                     <div className="flex items-center gap-1">
                       <Wind className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
                       <span className="text-[10px] text-slate-500 dark:text-slate-400">Viento</span>
@@ -2129,11 +2106,10 @@ export const CrisisRoomPage = () => {
                   </div>
 
                   {/* Nubes */}
-                  <div className={`px-2 py-1 rounded-lg border transition ${
-                    weatherMode === 'clouds'
+                  <div className={`px-2 py-1 rounded-lg border transition ${weatherMode === 'clouds'
                       ? 'bg-indigo-100 text-indigo-900 border-indigo-400 dark:bg-indigo-500/20 dark:border-indigo-500/60 dark:text-indigo-300 shadow-md ring-1 ring-indigo-400/40'
                       : 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-crisis-900/80 dark:border-crisis-700 dark:text-slate-300'
-                  }`}>
+                    }`}>
                     <div className="flex items-center gap-1">
                       <Cloud className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
                       <span className="text-[10px] text-slate-500 dark:text-slate-400">Nubes</span>
@@ -2142,11 +2118,10 @@ export const CrisisRoomPage = () => {
                   </div>
 
                   {/* Riesgo */}
-                  <div className={`px-2 py-1 rounded-lg border flex items-center gap-1 ${
-                    currentHourlyPoint.lluvia > 15
+                  <div className={`px-2 py-1 rounded-lg border flex items-center gap-1 ${currentHourlyPoint.lluvia > 15
                       ? 'bg-red-100 text-red-900 border-red-300 dark:bg-red-500/20 dark:border-red-500/40 dark:text-red-300'
                       : 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-500/15 dark:border-emerald-500/30 dark:text-emerald-300'
-                  }`}>
+                    }`}>
                     {currentHourlyPoint.lluvia > 15 ? (
                       <AlertTriangle className="w-3.5 h-3.5 text-red-500 dark:text-red-400 shrink-0" />
                     ) : (
@@ -2213,9 +2188,8 @@ export const CrisisRoomPage = () => {
                             const originalIdx = hourlyList.findIndex((p) => p.hora === h.hora);
                             if (originalIdx !== -1) setTimelineIndex(originalIdx);
                           }}
-                          className={`cursor-pointer hover:text-white transition font-medium ${
-                            currentHourlyPoint.hora === h.hora ? 'text-sky-400 font-bold underline' : ''
-                          }`}
+                          className={`cursor-pointer hover:text-white transition font-medium ${currentHourlyPoint.hora === h.hora ? 'text-sky-400 font-bold underline' : ''
+                            }`}
                         >
                           {h.hora}
                         </span>
@@ -2256,11 +2230,10 @@ export const CrisisRoomPage = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-slate-700 dark:text-slate-300 font-semibold">Tipo Asignado</label>
-                  <div className={`mt-1 flex items-center gap-2 px-3 py-2 rounded-lg border font-bold text-xs ${
-                    infraForm.tipo === 'HOSPITAL'
+                  <div className={`mt-1 flex items-center gap-2 px-3 py-2 rounded-lg border font-bold text-xs ${infraForm.tipo === 'HOSPITAL'
                       ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
                       : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300'
-                  }`}>
+                    }`}>
                     {infraForm.tipo === 'HOSPITAL' ? (
                       <>
                         <HeartPulse className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
@@ -2372,9 +2345,8 @@ export const CrisisRoomPage = () => {
                 </button>
                 <button
                   type="submit"
-                  className={`px-4 py-1.5 text-white font-bold rounded-lg shadow transition active:scale-95 flex items-center gap-1.5 ${
-                    infraForm.tipo === 'HOSPITAL' ? 'bg-red-600 hover:bg-red-500' : 'bg-amber-600 hover:bg-amber-500'
-                  }`}
+                  className={`px-4 py-1.5 text-white font-bold rounded-lg shadow transition active:scale-95 flex items-center gap-1.5 ${infraForm.tipo === 'HOSPITAL' ? 'bg-red-600 hover:bg-red-500' : 'bg-amber-600 hover:bg-amber-500'
+                    }`}
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>{infraForm.tipo === 'HOSPITAL' ? 'Guardar Hospital' : 'Guardar Bomberos'}</span>
