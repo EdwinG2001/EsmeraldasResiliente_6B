@@ -358,6 +358,17 @@ function MapController({ onCenterChange, targetFly }) {
     }
   }, [targetFly, map]);
 
+  // Redimensionar automáticamente el lienzo de Leaflet cuando los paneles colapsan o expanden
+  useEffect(() => {
+    const container = map.getContainer();
+    if (!container) return;
+    const observer = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [map]);
+
   useMapEvents({
     moveend: () => {
       const center = map.getCenter();
@@ -427,6 +438,7 @@ export const CrisisRoomPage = () => {
   // 'temp': Temperatura | 'rain': Precipitaciones | 'wind': Viento | 'clouds': Nubosidad | 'storm': Tormentas
   const [weatherMode, setWeatherMode] = useState('temp');
   const [consoleExpanded, setConsoleExpanded] = useState(true);
+  const [topControlsExpanded, setTopControlsExpanded] = useState(true);
 
   // Mapa base: 'calles' (Esri AWS sin marca de agua) | 'sat' (Esri Satélite HD) | 'osm' (Francia) | 'carto' (Voyager)
   const [baseMap, setBaseMap] = useState('calles');
@@ -926,7 +938,8 @@ export const CrisisRoomPage = () => {
         {/* ========================================================================= */}
         {/* BARRA SUPERIOR: SELECTOR DE CAPAS METEOROLÓGICAS & MAPA BASE */}
         {/* ========================================================================= */}
-        <div className="bg-white/95 dark:bg-crisis-800/95 backdrop-blur-md border-b border-slate-200 dark:border-crisis-700 px-3 md:px-4 py-2 flex flex-wrap items-center justify-between gap-2.5 z-10 shadow-sm">
+        {topControlsExpanded ? (
+          <div className="bg-white/95 dark:bg-crisis-800/95 backdrop-blur-md border-b border-slate-200 dark:border-crisis-700 px-3 md:px-4 py-2 flex flex-wrap items-center justify-between gap-2.5 z-10 shadow-sm animate-in fade-in duration-200">
           
           {/* Título & Badge de Monitoreo */}
           <div className="flex items-center gap-2.5">
@@ -1154,8 +1167,53 @@ export const CrisisRoomPage = () => {
                 </button>
               </div>
             )}
+
+            {/* Botón Retraer Barra Superior (Expandir Mapa) */}
+            <button
+              onClick={() => setTopControlsExpanded(false)}
+              className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-crisis-700/80 dark:hover:bg-crisis-700 rounded-lg transition border border-slate-300 dark:border-crisis-600 flex items-center gap-1 shrink-0 ml-1 shadow-sm active:scale-95"
+              title="Retraer controles superiores para expandir el mapa"
+            >
+              <ChevronUp className="w-3.5 h-3.5 text-sky-500" />
+              <span className="text-[10px] font-bold hidden xl:inline">Retraer</span>
+            </button>
           </div>
         </div>
+      ) : (
+        <div className="bg-white/95 dark:bg-crisis-800/95 backdrop-blur-md border-b border-slate-200 dark:border-crisis-700 px-3 md:px-4 py-1.5 flex items-center justify-between gap-2 z-10 shadow-sm animate-in fade-in duration-200">
+          {/* Título & Badge de Monitoreo Compacto */}
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-lg border border-emerald-300 dark:border-emerald-500/20 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span>
+              <span>SALA DE CRISIS COE • RADAR EN VIVO</span>
+            </span>
+
+            {/* Indicador de Capa Activa */}
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-crisis-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-crisis-700 flex items-center gap-1">
+              {weatherMode === 'temp' && <Thermometer className="w-3 h-3 text-amber-500" />}
+              {weatherMode === 'rain' && <Droplets className="w-3 h-3 text-sky-500" />}
+              {weatherMode === 'wind' && <Wind className="w-3 h-3 text-emerald-500" />}
+              {weatherMode === 'clouds' && <Cloud className="w-3 h-3 text-indigo-500" />}
+              <span className="capitalize">{weatherMode === 'temp' ? 'Temperatura' : weatherMode === 'rain' ? 'Precipitaciones' : weatherMode === 'wind' ? 'Viento' : 'Nubosidad'}</span>
+            </span>
+
+            {/* Indicador de Mapa Base */}
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 hidden sm:inline">
+              Base: <span className="font-bold text-slate-700 dark:text-slate-200 capitalize">{baseMap}</span>
+            </span>
+          </div>
+
+          {/* Botón Expandir Controles */}
+          <button
+            onClick={() => setTopControlsExpanded(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs transition shadow-sm active:scale-95"
+            title="Expandir controles superiores del radar y mapa"
+          >
+            <span>Expandir Controles</span>
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
         {/* ========================================================================= */}
         {/* MAPA PRINCIPAL LEAFLET CON RENDIMIENTO DE TESELAS OPTIMIZADO */}

@@ -24,7 +24,7 @@ import {
 import { EmergencyContactsModal } from '../common/EmergencyContactsModal';
 import { useAuth } from '../../context/AuthContext';
 
-export const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
+export const Sidebar = ({ isOpen = false, onClose = () => {}, isDesktopOpen = true }) => {
   const { isAuthenticated } = useAuth();
   const [showContactsModal, setShowContactsModal] = useState(false);
   const location = useLocation();
@@ -368,7 +368,7 @@ export const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
   return (
     <>
       {/* 1. SIDEBAR DE ESCRITORIO Y TABLETS GRANDES (MD+) */}
-      <aside className="hidden md:flex w-64 bg-white dark:bg-crisis-800 border-r border-slate-200 dark:border-crisis-700 flex-col justify-between shrink-0 h-full overflow-y-auto">
+      <aside className={`hidden ${isDesktopOpen ? 'md:flex' : 'md:hidden'} w-64 bg-white dark:bg-crisis-800 border-r border-slate-200 dark:border-crisis-700 flex-col justify-between shrink-0 h-full overflow-y-auto transition-all duration-300`}>
         {renderNavContent(false)}
         <div className="p-4 border-t border-slate-200 dark:border-crisis-700 text-center text-[11px] text-slate-500 dark:text-slate-400 font-medium">
           Municipio de Esmeraldas • COE Cantonal
