@@ -34,7 +34,7 @@ export const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
 
   const navItems = [
     {
-      to: '/',
+      to: '/sala-crisis',
       label: 'Sala de Crisis (COE)',
       icon: Activity,
       badge: 'En Vivo',
@@ -306,6 +306,24 @@ export const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
         <p className="text-[11px] text-slate-600 dark:text-slate-400">
           Aiven PostGIS (EPSG:4326) conectado. Polígonos de susceptibilidad y ríos Teaone/Esmeraldas cargados.
         </p>
+      </div>
+
+      {/* Botón: Cambiar Perfil / Portal de Entrada */}
+      <div>
+        <NavLink
+          to="/portal"
+          onClick={() => { if (isMobile) onClose(); }}
+          className="w-full mb-2 py-2 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-300 font-bold text-xs rounded-xl border border-slate-300 dark:border-slate-700/80 flex items-center justify-between transition active:scale-95 group"
+          title="Regresar a la pantalla de selección de perfil"
+        >
+          <div className="flex items-center gap-2">
+            <Layers className="w-3.5 h-3.5 text-sky-500 group-hover:rotate-12 transition-transform" />
+            <span>Cambiar Perfil / Portal</span>
+          </div>
+          <span className="text-[9px] bg-sky-500/10 text-sky-500 border border-sky-500/20 px-1.5 py-0.2 rounded font-mono font-bold">
+            INICIO
+          </span>
+        </NavLink>
       </div>
 
       {/* Botón Destacado: Contactos de Emergencia (Directorio Rápido) */}

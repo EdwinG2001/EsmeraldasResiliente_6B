@@ -43,6 +43,16 @@ export const Navbar = ({ onToggleSidebar, isSidebarOpen }) => {
 
       {/* Indicadores de Conexión, Offline Sync y Usuario */}
       <div className="flex items-center space-x-1.5 sm:space-x-3">
+        {/* Botón para regresar al Portal de Selección */}
+        <Link
+          to="/portal"
+          className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 font-bold text-[11px] border border-slate-300 dark:border-slate-700 transition shadow-sm"
+          title="Cambiar de modo / Volver al portal de bienvenida"
+        >
+          <span className="text-sky-500 font-black">←</span>
+          <span>Portal</span>
+        </Link>
+
         {/* Selector de Tema Claro / Oscuro */}
         <button
           onClick={toggleTheme}

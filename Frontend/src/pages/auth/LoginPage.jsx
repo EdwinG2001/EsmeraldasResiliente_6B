@@ -69,7 +69,7 @@ export const LoginPage = () => {
 
           loginWithKeycloakToken(kcToken, kcUser);
           window.history.replaceState(null, '', window.location.pathname);
-          navigate('/');
+          navigate('/sala-crisis');
         }
       } catch (e) {
         console.error('Error decodificando token Keycloak:', e);
@@ -84,7 +84,7 @@ export const LoginPage = () => {
     setLoading(true);
     try {
       await login({ username, password });
-      navigate('/');
+      navigate('/sala-crisis');
     } catch (err) {
       setError(
         err.response?.data?.detail ||
