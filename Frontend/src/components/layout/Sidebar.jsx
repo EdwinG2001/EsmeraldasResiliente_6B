@@ -22,8 +22,10 @@ import {
   X
 } from 'lucide-react';
 import { EmergencyContactsModal } from '../common/EmergencyContactsModal';
+import { useAuth } from '../../context/AuthContext';
 
 export const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
+  const { isAuthenticated } = useAuth();
   const [showContactsModal, setShowContactsModal] = useState(false);
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -32,34 +34,48 @@ export const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
   // Estado del acordeón del submenú de incidentes (abierto por defecto, colapsable/expandible por el usuario)
   const [incidentesMenuOpen, setIncidentesMenuOpen] = useState(true);
 
-  const navItems = [
+  // Módulos del Sistema: Filtrados según modo de acceso (Visitante público vs Personal Oficial COE)
+  const allNavItems = [
     {
       to: '/sala-crisis',
       label: 'Sala de Crisis (COE)',
       icon: Activity,
       badge: 'En Vivo',
+      isPublic: true,
     },
     {
       to: '/incidentes',
       label: 'Seguimiento Incidentes',
       icon: ShieldAlert,
+      isPublic: false,
     },
     {
       to: '/reportes',
       label: 'Reporte Comunitario',
       icon: AlertTriangle,
+      isPublic: true,
     },
     {
       to: '/albergues',
       label: 'Albergues y Evacuación',
       icon: Home,
+      isPublic: false,
     },
     {
       to: '/humanitaria',
       label: 'Censo y Asistencia',
       icon: HeartHandshake,
+      isPublic: false,
     },
   ];
+
+  // Si no está autenticado (Modo Visitante), SOLO se muestran 2 módulos en navegación:
+  // 1. Sala de Crisis (COE) [Mapa y eventos]
+  // 2. Reporte Comunitario
+  // y en el pie: 3. Cambiar Perfil / Portal
+  const navItems = isAuthenticated 
+    ? allNavItems 
+    : allNavItems.filter((item) => item.isPublic);
 
   // Filtros de estado solicitados por el usuario
   const incidentStatusFilters = [
@@ -297,16 +313,18 @@ export const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
         </nav>
       </div>
 
-      {/* Resumen de Datos Activos */}
-      <div className="bg-slate-50 dark:bg-crisis-900/60 p-3 rounded-lg border border-slate-200 dark:border-crisis-700 text-xs text-slate-600 dark:text-slate-400 space-y-2">
-        <div className="flex items-center gap-2 text-slate-800 dark:text-slate-300 font-semibold">
-          <Layers className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-          <span>Base Espacial Activa</span>
+      {/* Resumen de Datos Activos (Solo Personal Oficial COE) */}
+      {isAuthenticated && (
+        <div className="bg-slate-50 dark:bg-crisis-900/60 p-3 rounded-lg border border-slate-200 dark:border-crisis-700 text-xs text-slate-600 dark:text-slate-400 space-y-2">
+          <div className="flex items-center gap-2 text-slate-800 dark:text-slate-300 font-semibold">
+            <Layers className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+            <span>Base Espacial Activa</span>
+          </div>
+          <p className="text-[11px] text-slate-600 dark:text-slate-400">
+            Aiven PostGIS (EPSG:4326) conectado. Polígonos de susceptibilidad y ríos Teaone/Esmeraldas cargados.
+          </p>
         </div>
-        <p className="text-[11px] text-slate-600 dark:text-slate-400">
-          Aiven PostGIS (EPSG:4326) conectado. Polígonos de susceptibilidad y ríos Teaone/Esmeraldas cargados.
-        </p>
-      </div>
+      )}
 
       {/* Botón: Cambiar Perfil / Portal de Entrada */}
       <div>
