@@ -389,6 +389,164 @@ const WeatherIcon = ({ condition = '', className = 'w-5 h-5' }) => {
   return <Sun className={`${className} text-amber-400`} />;
 };
 
+// Ícono especial de baliza de auditoría territorial para incidentes resueltos (4 segundos)
+const createAuditBeaconIcon = (beacon) => {
+  const isFading = beacon.fading;
+  const isAtendido = (beacon.estado || '').toUpperCase() === 'ATENDIDO';
+  const badgeColor = isAtendido ? '#10b981' : '#64748b';
+  const glowColor = isAtendido ? 'rgba(16, 185, 129, 0.6)' : 'rgba(100, 116, 139, 0.6)';
+
+  return L.divIcon({
+    className: 'custom-audit-beacon-container',
+    html: `
+      <div style="
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        opacity: ${isFading ? '0' : '1'};
+        transform: ${isFading ? 'scale(1.25) translateY(-12px)' : 'scale(1) translateY(0)'};
+        filter: ${isFading ? 'blur(6px)' : 'none'};
+        pointer-events: none;
+      ">
+        <!-- 1. TARJETA HUD FLOTANTE SUPERIOR -->
+        <div style="
+          position: absolute;
+          bottom: 58px;
+          background: rgba(15, 23, 42, 0.96);
+          border: 1.5px solid ${badgeColor};
+          border-radius: 14px;
+          padding: 8px 14px;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.8), 0 0 16px ${glowColor};
+          backdrop-filter: blur(12px);
+          white-space: nowrap;
+          text-align: center;
+          font-family: ui-sans-serif, system-ui, sans-serif;
+          z-index: 1000;
+        ">
+          <!-- Encabezado con Checkmark y Badge -->
+          <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 3px;">
+            <span style="
+              background: ${badgeColor}22;
+              color: ${badgeColor};
+              border: 1px solid ${badgeColor}66;
+              padding: 2px 7px;
+              border-radius: 9999px;
+              font-size: 9.5px;
+              font-weight: 900;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+              display: inline-flex;
+              align-items: center;
+              gap: 4px;
+            ">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              ${isAtendido ? 'CASO ATENDIDO' : 'CASO DESCARTADO'} • AUDITORÍA COE
+            </span>
+          </div>
+
+          <!-- Tipo de Incidente -->
+          <div style="color: #ffffff; font-size: 13px; font-weight: 900; letter-spacing: 0.02em; margin-bottom: 2px;">
+            ${beacon.tipo || 'Incidente Registrado'}
+          </div>
+
+          <!-- Subtítulo Informativo -->
+          <div style="color: #94a3b8; font-size: 10px; font-weight: 600;">
+            📍 Registro Histórico en Coordenada Exacta
+          </div>
+
+          <!-- Barra de Progreso Regresiva de 4 Segundos -->
+          <div style="
+            margin-top: 6px;
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 2px;
+            overflow: hidden;
+          ">
+            <div style="
+              width: 100%;
+              height: 100%;
+              background: ${badgeColor};
+              box-shadow: 0 0 8px ${badgeColor};
+              animation: auditDeplete 4s linear forwards;
+            "></div>
+          </div>
+        </div>
+
+        <!-- 2. FLECHITA HUD -->
+        <div style="
+          position: absolute;
+          bottom: 48px;
+          width: 0;
+          height: 0;
+          border-left: 6px solid transparent;
+          border-right: 6px solid transparent;
+          border-top: 10px solid ${badgeColor};
+        "></div>
+
+        <!-- 3. ONDAS RADAR SONAR (EXPANSIÓN CIRCULAR) -->
+        <div style="
+          position: absolute;
+          top: -24px;
+          left: -24px;
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          border: 2px solid ${badgeColor};
+          background: ${badgeColor}33;
+          animation: auditPing 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+        "></div>
+
+        <div style="
+          position: absolute;
+          top: -36px;
+          left: -36px;
+          width: 72px;
+          height: 72px;
+          border-radius: 50%;
+          border: 1.5px dashed ${badgeColor};
+          animation: auditPing 2.2s cubic-bezier(0, 0, 0.2, 1) infinite 0.6s;
+        "></div>
+
+        <!-- 4. APUNTADOR CENTRAL (NÚCLEO RADAR) -->
+        <div style="
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: radial-gradient(circle, ${badgeColor} 40%, #064e3b 100%);
+          border: 3px solid #ffffff;
+          box-shadow: 0 0 20px ${badgeColor}, 0 4px 10px rgba(0,0,0,0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          z-index: 10;
+        ">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+
+        <!-- 5. PUNTERO GPS INFERIOR (PIN POINT) -->
+        <div style="
+          width: 4px;
+          height: 12px;
+          background: ${badgeColor};
+          box-shadow: 0 0 6px ${badgeColor};
+          border-radius: 2px;
+          margin-top: -2px;
+        "></div>
+      </div>
+    `,
+    iconSize: [0, 0],
+    iconAnchor: [0, 6],
+  });
+};
+
 export const CrisisRoomPage = () => {
   const { 
     user, 
@@ -454,6 +612,11 @@ export const CrisisRoomPage = () => {
   const incidentMarkerRefs = useRef({});
   const openedFocusIncidentRef = useRef(null);
 
+  // Estado para la baliza de auditoría territorial de 4 segundos (Casos Resueltos ATENDIDO / DESCARTADO)
+  const [auditBeacon, setAuditBeacon] = useState(null);
+  const auditTimerRef = useRef(null);
+  const auditFadeTimerRef = useRef(null);
+
   // Capas territoriales conmutables
   const [layers, setLayers] = useState({
     zonasRiesgo: true,
@@ -504,15 +667,63 @@ export const CrisisRoomPage = () => {
     const focusIncidentId = searchParams.get('focusIncident');
     const focusLat = searchParams.get('lat');
     const focusLon = searchParams.get('lon');
+    const isAudit = searchParams.get('audit') === 'true' || 
+      ['ATENDIDO', 'DESCARTADO'].includes((searchParams.get('estado') || '').toUpperCase());
 
     if (focusLat && focusLon) {
       const lat = parseFloat(focusLat);
       const lon = parseFloat(focusLon);
       if (!isNaN(lat) && !isNaN(lon)) {
         setTargetFly({ lat, lon, zoom: 17, ts: Date.now() });
-        setSelectedIncidentId(String(focusIncidentId));
+
+        if (isAudit) {
+          // Limpiar temporizadores previos
+          if (auditTimerRef.current) clearTimeout(auditTimerRef.current);
+          if (auditFadeTimerRef.current) clearTimeout(auditFadeTimerRef.current);
+
+          const estadoAudit = (searchParams.get('estado') || 'ATENDIDO').toUpperCase();
+          const tipoAudit = searchParams.get('tipo') ? decodeURIComponent(searchParams.get('tipo')) : 'Incidente Resuelto';
+          const descAudit = searchParams.get('desc') ? decodeURIComponent(searchParams.get('desc')) : '';
+
+          // Activar baliza de auditoría en estado
+          setAuditBeacon({
+            id: focusIncidentId,
+            lat,
+            lon,
+            estado: estadoAudit,
+            tipo: tipoAudit,
+            desc: descAudit,
+            fading: false,
+          });
+
+          // A los 3.2s activar fade-out suave
+          auditFadeTimerRef.current = setTimeout(() => {
+            setAuditBeacon((prev) => (prev ? { ...prev, fading: true } : null));
+          }, 3200);
+
+          // A los 4.0s eliminar del mapa y limpiar parámetros URL
+          auditTimerRef.current = setTimeout(() => {
+            setAuditBeacon(null);
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('focusIncident');
+            newParams.delete('lat');
+            newParams.delete('lon');
+            newParams.delete('audit');
+            newParams.delete('estado');
+            newParams.delete('tipo');
+            newParams.delete('desc');
+            setSearchParams(newParams, { replace: true });
+          }, 4000);
+        } else {
+          setSelectedIncidentId(String(focusIncidentId));
+        }
       }
     }
+
+    return () => {
+      if (auditTimerRef.current) clearTimeout(auditTimerRef.current);
+      if (auditFadeTimerRef.current) clearTimeout(auditFadeTimerRef.current);
+    };
   }, [searchParams]);
 
   // Apertura controlada por una sola vez del popup del incidente enfocado (evita que se quede bloqueado al cerrar)
@@ -935,6 +1146,18 @@ export const CrisisRoomPage = () => {
     <ErrorBoundary>
       <div className="relative w-full h-full flex flex-col bg-slate-900 overflow-hidden">
         
+        {/* Estilos para animación de la baliza de auditoría territorial (4s) */}
+        <style>{`
+          @keyframes auditDeplete {
+            0% { width: 100%; }
+            100% { width: 0%; }
+          }
+          @keyframes auditPing {
+            0% { transform: scale(0.6); opacity: 0.9; }
+            80%, 100% { transform: scale(2.2); opacity: 0; }
+          }
+        `}</style>
+
         {/* ========================================================================= */}
         {/* BARRA SUPERIOR: SELECTOR DE CAPAS METEOROLÓGICAS & MAPA BASE */}
         {/* ========================================================================= */}
@@ -1765,7 +1988,38 @@ export const CrisisRoomPage = () => {
               </React.Fragment>
               );
             })}
+
+            {/* BALIZA DE AUDITORÍA TERRITORIAL TEMPORAL (4 SEGUNDOS PARA CASOS RESUELTOS) */}
+            {auditBeacon && (
+              <Marker
+                position={[auditBeacon.lat, auditBeacon.lon]}
+                icon={createAuditBeaconIcon(auditBeacon)}
+                zIndexOffset={5000}
+              />
+            )}
           </MapContainer>
+
+          {/* TOAST DE AUDITORÍA TERRITORIAL DE CASO RESUELTO (4 SEGUNDOS) */}
+          {auditBeacon && (
+            <div 
+              className={`absolute top-4 left-1/2 -translate-x-1/2 z-[1200] px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xl backdrop-blur-xl border border-emerald-500/60 bg-slate-900/95 text-white ring-2 ring-emerald-500/30 transition-all duration-700 flex items-center gap-3 ${
+                auditBeacon.fading ? 'opacity-0 -translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100'
+              }`}
+            >
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                <ShieldCheck className="w-4 h-4 animate-pulse" />
+              </div>
+              <div className="flex flex-col text-left">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase font-black tracking-widest text-emerald-400">Auditoría Territorial COE</span>
+                  <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded font-mono font-bold">4s</span>
+                </div>
+                <span className="text-slate-200 text-xs font-bold">
+                  📍 Ubicación histórica de caso resuelto ({auditBeacon.tipo})
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* TOAST DE REUBICACIÓN EN BASE DE DATOS */}
           {saveStatus && (
