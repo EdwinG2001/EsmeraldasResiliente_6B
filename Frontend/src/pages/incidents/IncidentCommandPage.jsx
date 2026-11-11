@@ -459,7 +459,7 @@ export const IncidentCommandPage = () => {
   const handleVerEnMapa = (inc) => {
     const lat = inc.latitud || (inc.geometry?.coordinates ? inc.geometry.coordinates[1] : (inc.lat || 0.9682));
     const lon = inc.longitud || (inc.geometry?.coordinates ? inc.geometry.coordinates[0] : (inc.lon || inc.lng || -79.6517));
-    navigate(`/?focusIncident=${inc.id}&lat=${lat}&lon=${lon}`);
+    navigate(`/sala-crisis?focusIncident=${inc.id}&lat=${lat}&lon=${lon}`);
   };
 
   // Renderizado unificado de tarjeta de incidente (funciona tanto para tarjetas individuales como dentro de clústeres)

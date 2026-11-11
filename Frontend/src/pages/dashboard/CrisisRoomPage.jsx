@@ -524,7 +524,7 @@ export const CrisisRoomPage = () => {
         e.preventDefault();
         e.stopPropagation();
         setSelectedIncidentId(null);
-        if (location.pathname === '/' && searchParams.get('focusIncident')) {
+        if (searchParams.get('focusIncident')) {
           const newParams = new URLSearchParams(searchParams);
           newParams.delete('focusIncident');
           newParams.delete('lat');
@@ -1732,7 +1732,7 @@ export const CrisisRoomPage = () => {
                             const marker = incidentMarkerRefs.current[incId];
                             if (marker) marker.closePopup();
                             setSelectedIncidentId(null);
-                            if (location.pathname === '/' && searchParams.get('focusIncident')) {
+                            if (searchParams.get('focusIncident')) {
                               const newParams = new URLSearchParams(searchParams);
                               newParams.delete('focusIncident');
                               newParams.delete('lat');
