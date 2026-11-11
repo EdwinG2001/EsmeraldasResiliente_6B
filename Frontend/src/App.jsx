@@ -39,6 +39,9 @@ export function App() {
               <Route path="/" element={<PortalSelectionPage />} />
               <Route path="/portal" element={<PortalSelectionPage />} />
 
+              {/* Pantalla de Inicio de Sesión Oficial (Sin menú lateral ni módulos del sistema) */}
+              <Route path="/login" element={<LoginPage />} />
+
               {/* Módulos Principales del Sistema alojados dentro de MainLayout */}
               <Route element={<MainLayout />}>
                 <Route path="sala-crisis" element={<CrisisRoomPage />} />
@@ -76,7 +79,6 @@ export function App() {
                     </ProtectedCoeRoute>
                   } 
                 />
-                <Route path="login" element={<LoginPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
             </Routes>
