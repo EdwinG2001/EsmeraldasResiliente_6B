@@ -2,7 +2,38 @@ import uuid
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from django.contrib.gis.geos import Point
-from .models import FamiliaCenso, BodegaAcopio, SuministroCatalogo, InventarioBodega
+from .models import FamiliaCenso, BodegaAcopio, SuministroCatalogo, InventarioBodega, SolicitudCenso
+
+class SolicitudCensoSerializer(serializers.ModelSerializer):
+    lat = serializers.FloatField(write_only=True, required=False, allow_null=True)
+    lon = serializers.FloatField(write_only=True, required=False, allow_null=True)
+    atendido_por_nombre = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = SolicitudCenso
+        fields = [
+            'id', 'jefe_familia_nombre', 'jefe_familia_cedula', 'telefono_contacto',
+            'barrio_sector', 'direccion_referencia', 'latitud', 'longitud',
+            'estado', 'atendido_por', 'atendido_por_nombre', 'observaciones',
+            'fecha_solicitud', 'fecha_atencion', 'lat', 'lon'
+        ]
+        read_only_fields = ['id', 'fecha_solicitud']
+
+    def get_atendido_por_nombre(self, obj):
+        if obj.atendido_por:
+            return obj.atendido_por.get_full_name() or obj.atendido_por.username
+        return None
+
+    def create(self, validated_data):
+        lat = validated_data.pop('lat', None)
+        lon = validated_data.pop('lon', None)
+        if lat is not None and lon is not None:
+            validated_data['latitud'] = lat
+            validated_data['longitud'] = lon
+            validated_data['ubicacion'] = Point(float(lon), float(lat), srid=4326)
+        elif validated_data.get('latitud') and validated_data.get('longitud'):
+            validated_data['ubicacion'] = Point(float(validated_data['longitud']), float(validated_data['latitud']), srid=4326)
+        return super().create(validated_data)
 
 class FamiliaCensoGeoSerializer(GeoFeatureModelSerializer):
     lat = serializers.FloatField(write_only=True, required=False, allow_null=True)

@@ -23,6 +23,8 @@ def _crear_punto_espacial(lon, lat):
     except Exception:
         return f'SRID=4326;POINT({float(lon)} {float(lat)})'
 
+from django.utils import timezone
+from django.db.models import Q
 from .models import ZonaRiesgo, CapaHidricaVial, InfraestructuraEsencial
 from .serializers import (
     ZonaRiesgoGeoSerializer,
@@ -34,6 +36,7 @@ class ZonasRiesgoGeoJSONAPIView(generics.ListAPIView):
     """
     Retorna GeoJSON con los polígonos de zonas susceptibles a inundaciones o deslaves.
     Soporta filtro por query param: ?nivel_riesgo=ALTO
+    Soporta filtro por query param: ?solo_alertadas=true (solo polígonos con alerta activa del COE)
     """
     serializer_class = ZonaRiesgoGeoSerializer
     permission_classes = [permissions.AllowAny]
@@ -41,10 +44,101 @@ class ZonasRiesgoGeoJSONAPIView(generics.ListAPIView):
 
     def get_queryset(self):
         qs = ZonaRiesgo.objects.filter(activo=True)
+        solo_alertadas = self.request.query_params.get('solo_alertadas')
+        if solo_alertadas is not None and str(solo_alertadas).lower() == 'true':
+            qs = qs.filter(alerta_activa=True)
         nivel = self.request.query_params.get('nivel_riesgo')
         if nivel:
             qs = qs.filter(nivel_riesgo=nivel.upper())
         return qs
+
+class EmitirAlertaSectorialAPIView(APIView):
+    """
+    Permite al Gestor, Operador o Administrador del COE emitir o desactivar
+    alertas sectoriales tempranas que dinamizan el pintado de polígonos de riesgo en el mapa GIS.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        """Retorna las alertas sectoriales actualmente activas"""
+        activas = ZonaRiesgo.objects.filter(activo=True, alerta_activa=True)
+        serializer = ZonaRiesgoGeoSerializer(activas, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        data = request.data
+        sector_nombre = data.get('sector', '').strip()
+        zona_id = data.get('zona_id')
+        nivel = data.get('nivel', 'ROJA').upper()
+        tipo = data.get('tipo', 'DESBORDE_INMINENTE')
+        mensaje = data.get('mensaje', 'Alerta sectorial emitida.')
+        instrucciones = data.get('instrucciones', 'Evacuación preventiva.')
+        activar = data.get('activar', True)
+        if isinstance(activar, str):
+            activar = activar.lower() in ['true', '1', 'yes']
+
+        user = request.user if request.user.is_authenticated else None
+
+        # Buscar zona correspondiente
+        zonas = []
+        if zona_id:
+            zonas = list(ZonaRiesgo.objects.filter(id=zona_id))
+        elif sector_nombre:
+            partes = [p.strip() for p in sector_nombre.split('/') if len(p.strip()) > 2]
+            query = Q(nombre__icontains=sector_nombre)
+            for p in partes:
+                query |= Q(nombre__icontains=p) | Q(descripcion__icontains=p)
+            zonas = list(ZonaRiesgo.objects.filter(query))
+
+        if not zonas and activar:
+            # Crear polígono representativo si no existe la zona
+            try:
+                from django.contrib.gis.geos import Polygon
+                poly = Polygon([
+                    (-79.6640, 0.9750),
+                    (-79.6580, 0.9820),
+                    (-79.6490, 0.9780),
+                    (-79.6510, 0.9690),
+                    (-79.6600, 0.9660),
+                    (-79.6640, 0.9750)
+                ], srid=4326)
+                nueva_zona = ZonaRiesgo.objects.create(
+                    nombre=sector_nombre or '50 Casas / Ribera del Río Teaone',
+                    tipo_evento=tipo,
+                    nivel_riesgo='ALTO',
+                    descripcion=mensaje,
+                    geometria=poly,
+                    activo=True,
+                    alerta_activa=True,
+                    nivel_alerta=nivel,
+                    mensaje_alerta=mensaje,
+                    instrucciones_alerta=instrucciones,
+                    fecha_alerta=timezone.now(),
+                    emitida_por=user
+                )
+                zonas = [nueva_zona]
+            except Exception:
+                pass
+
+        # Actualizar zonas encontradas
+        for z in zonas:
+            z.alerta_activa = activar
+            if activar:
+                z.nivel_alerta = nivel
+                z.mensaje_alerta = mensaje
+                z.instrucciones_alerta = instrucciones
+                z.fecha_alerta = timezone.now()
+                if user:
+                    z.emitida_por = user
+            z.save()
+
+        return Response({
+            'success': True,
+            'activada': activar,
+            'sector': sector_nombre,
+            'zonas_actualizadas': len(zonas),
+            'mensaje': f"Alerta sectorial {'emitida y activa en mapa GIS' if activar else 'desactivada'}."
+        }, status=status.HTTP_200_OK)
 
 class CapasHidricasVialesGeoJSONAPIView(generics.ListAPIView):
     """

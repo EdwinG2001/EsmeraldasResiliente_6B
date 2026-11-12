@@ -1,13 +1,16 @@
+from django.utils import timezone
+from django.db import models
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import FamiliaCenso, BodegaAcopio, SuministroCatalogo, InventarioBodega
+from .models import FamiliaCenso, BodegaAcopio, SuministroCatalogo, InventarioBodega, SolicitudCenso
 from .serializers import (
     FamiliaCensoGeoSerializer,
     FamiliaCensoSimpleSerializer,
     BodegaAcopioSerializer,
     SuministroCatalogoSerializer,
-    InventarioBodegaSerializer
+    InventarioBodegaSerializer,
+    SolicitudCensoSerializer
 )
 
 class FamiliasCensoListCreateAPIView(generics.ListCreateAPIView):
@@ -146,4 +149,69 @@ class InventarioBodegasStockAPIView(generics.ListCreateAPIView):
     queryset = InventarioBodega.objects.select_related('bodega', 'suministro').all()
     serializer_class = InventarioBodegaSerializer
     permission_classes = [permissions.AllowAny]
+
+class SolicitudesCensoListCreateAPIView(generics.ListCreateAPIView):
+    """
+    Gestión de Solicitudes de Censo de Familias (Ventana de 48h).
+    Permite a los ciudadanos solicitar visita de censadores a su sector/barrio.
+    Permite a Operadores, Digitalizadores y Administradores consultar y gestionar solicitudes.
+    """
+    serializer_class = SolicitudCensoSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = SolicitudCenso.objects.all().order_by('-fecha_solicitud')
+        
+        # Filtros opcionales
+        estado = self.request.query_params.get('estado')
+        if estado and estado.upper() != 'TODOS':
+            qs = qs.filter(estado=estado.upper())
+        
+        cedula = self.request.query_params.get('cedula')
+        if cedula:
+            qs = qs.filter(jefe_familia_cedula=cedula.strip())
+            
+        sector = self.request.query_params.get('sector')
+        if sector:
+            qs = qs.filter(barrio_sector__icontains=sector.strip())
+
+        # Si el usuario no es personal autorizado (Operador, Digitalizador, Admin),
+        # solo puede ver sus propias solicitudes por cédula o id de usuario
+        if not user.is_authenticated or not (
+            user.is_superuser or 
+            getattr(user, 'rol', None) in ['ADMINISTRADOR', 'OPERADOR', 'OPERADOR_COE', 'DIGITALIZADOR']
+        ):
+            if user.is_authenticated:
+                qs = qs.filter(models.Q(usuario=user) | models.Q(jefe_familia_cedula=getattr(user, 'cedula', '')))
+            elif cedula:
+                qs = qs.filter(jefe_familia_cedula=cedula.strip())
+            else:
+                return SolicitudCenso.objects.none()
+
+        return qs
+
+    def perform_create(self, serializer):
+        user = self.request.user if self.request.user.is_authenticated else None
+        serializer.save(usuario=user)
+
+class SolicitudCensoDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Actualización de estado de la solicitud (EN_CAMINO, ATENDIDO, DESCARTADO)
+    y asignación de censador/digitalizador.
+    """
+    queryset = SolicitudCenso.objects.all()
+    serializer_class = SolicitudCensoSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def perform_update(self, serializer):
+        user = self.request.user if self.request.user.is_authenticated else None
+        nuevo_estado = serializer.validated_data.get('estado')
+        if nuevo_estado == 'ATENDIDO':
+            serializer.save(atendido_por=user, fecha_atencion=timezone.now())
+        elif nuevo_estado == 'EN_CAMINO':
+            serializer.save(atendido_por=user)
+        else:
+            serializer.save()
+
 

@@ -23,14 +23,19 @@ import {
   LogIn,
   Home,
   Calendar,
-  UserCheck
+  UserCheck,
+  Clock,
+  PhoneCall,
+  Navigation,
+  Truck
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { humanitarianApi } from '../../api/humanitarianApi';
 import { useAuth } from '../../context/AuthContext';
 
 export const HumanitarianPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { 
     user, 
     isAuthenticated, 
@@ -65,11 +70,18 @@ export const HumanitarianPage = () => {
   // Gestión de suministros (bodegas y kits): Administrador, Gestor y Operador
   const canManageSupplies = Boolean(isAuthenticated && (isMasterAdmin || isGestor || isOperador || authCanManageSupplies));
   const isAdmin = Boolean(isMasterAdmin || isOperador);
+  // Rol exclusivo para ver y gestionar solicitudes de censo (Operador, Digitalizador y Administrador)
+  const canViewSolicitudes = Boolean(isAuthenticated && (isMasterAdmin || isOperador || isDigitalizador));
 
-  const [tab, setTab] = useState('censo'); // 'censo' | 'bodegas' | 'suministros'
+  const [tab, setTab] = useState(
+    searchParams.get('tab') === 'solicitudes' && canViewSolicitudes ? 'solicitudes' : 'censo'
+  ); // 'censo' | 'bodegas' | 'suministros' | 'solicitudes'
   const [familias, setFamilias] = useState([]);
   const [bodegas, setBodegas] = useState([]);
   const [suministros, setSuministros] = useState([]);
+  const [solicitudes, setSolicitudes] = useState([]);
+  const [solicitudFilter, setSolicitudFilter] = useState('TODOS');
+  const [solicitudSearch, setSolicitudSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
   // Modal / Ventanita flotante para ver detalle completo de ficha censal
@@ -122,10 +134,11 @@ export const HumanitarianPage = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [fRes, bRes, sRes] = await Promise.allSettled([
+      const [fRes, bRes, sRes, solRes] = await Promise.allSettled([
         humanitarianApi.getCensoFamilias(),
         humanitarianApi.getBodegas(),
         humanitarianApi.getSuministros(),
+        canViewSolicitudes ? humanitarianApi.getSolicitudesCenso() : Promise.resolve([]),
       ]);
       if (fRes.status === 'fulfilled') {
         const val = fRes.value;
@@ -142,6 +155,11 @@ export const HumanitarianPage = () => {
         const list = Array.isArray(val) ? val : (Array.isArray(val?.results) ? val.results : []);
         setSuministros(list);
       }
+      if (solRes.status === 'fulfilled') {
+        const val = solRes.value;
+        const list = Array.isArray(val) ? val : (Array.isArray(val?.results) ? val.results : []);
+        setSolicitudes(list);
+      }
     } catch (err) {
       console.error('Error cargando asistencia humanitaria:', err);
     } finally {
@@ -152,6 +170,52 @@ export const HumanitarianPage = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Manejadores para Solicitudes de Censo (48h)
+  const handleIniciarCensoDesdeSolicitud = (sol) => {
+    setNuevoCenso({
+      codigo_censo: `CENSO-ESM-${Math.floor(1000 + Math.random() * 9000)}`,
+      jefe_familia_nombre: sol.jefe_familia_nombre || '',
+      jefe_familia_cedula: sol.jefe_familia_cedula || '',
+      telefono_contacto: sol.telefono_contacto || '',
+      parroquia: 'Esmeraldas',
+      barrio_sector: sol.barrio_sector || '',
+      direccion_referencia: sol.direccion_referencia || '',
+      numero_integrantes: 4,
+      ninos_menores_5: 0,
+      adultos_mayores: 0,
+      personas_discapacidad: 0,
+      danos_vivienda: 'PARCIAL',
+      requiere_evacuacion_inmediata: false,
+      lat: sol.latitud || sol.lat,
+      lon: sol.longitud || sol.lon
+    });
+    // Notificar que la brigada está en camino
+    humanitarianApi.actualizarSolicitudCenso(sol.id, { estado: 'EN_CAMINO' })
+      .then(() => loadData())
+      .catch(() => {});
+    setTab('censo');
+  };
+
+  const handleMarcarSolicitudAtendida = async (id) => {
+    try {
+      await humanitarianApi.actualizarSolicitudCenso(id, { estado: 'ATENDIDO' });
+      await loadData();
+    } catch (err) {
+      alert('Error actualizando solicitud: ' + (err.response?.data?.detail || err.message));
+    }
+  };
+
+  const handleDescartarSolicitud = async (id) => {
+    if (window.confirm('¿Confirmas que deseas descartar esta solicitud de censo?')) {
+      try {
+        await humanitarianApi.actualizarSolicitudCenso(id, { estado: 'DESCARTADO' });
+        await loadData();
+      } catch (err) {
+        alert('Error descartando solicitud: ' + (err.response?.data?.detail || err.message));
+      }
+    }
+  };
 
   // Submit Censo
   const handleSubmitCenso = async (e) => {
@@ -343,7 +407,7 @@ export const HumanitarianPage = () => {
         </div>
 
         {/* Selector de Pestañas */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 w-full lg:w-auto bg-slate-100 dark:bg-crisis-900 p-1 rounded-xl border border-slate-300 dark:border-crisis-700 text-xs gap-1">
+        <div className={`grid grid-cols-1 ${canViewSolicitudes ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} w-full lg:w-auto bg-slate-100 dark:bg-crisis-900 p-1 rounded-xl border border-slate-300 dark:border-crisis-700 text-xs gap-1`}>
           <button
             onClick={() => setTab('censo')}
             className={`px-3 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
@@ -374,6 +438,24 @@ export const HumanitarianPage = () => {
           >
             <Boxes className="w-4 h-4 shrink-0" /> <span className="truncate">Kits COE ({suministros.length})</span>
           </button>
+          {canViewSolicitudes && (
+            <button
+              onClick={() => setTab('solicitudes')}
+              className={`px-3 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                tab === 'solicitudes'
+                  ? 'bg-amber-600 text-white shadow'
+                  : 'text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-crisis-800'
+              }`}
+            >
+              <Clock className="w-4 h-4 shrink-0" />
+              <span className="truncate">Solicitudes 48h ({solicitudes.length})</span>
+              {solicitudes.filter((s) => s.estado === 'PENDIENTE').length > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 text-[10px] font-black rounded-full bg-red-500 text-white animate-pulse">
+                  {solicitudes.filter((s) => s.estado === 'PENDIENTE').length}
+                </span>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -896,7 +978,277 @@ export const HumanitarianPage = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL FORMULARIO BODEGA (CREAR / EDITAR) */}
+      {/* PESTAÑA 4: SOLICITUDES DE CENSO DE CIUDADANOS (VENTANA 48H) */}
+      {/* ========================================================================= */}
+      {tab === 'solicitudes' && canViewSolicitudes && (
+        <div className="space-y-4">
+          {/* Header y Filtros */}
+          <div className="bg-white dark:bg-crisis-800 border border-slate-200 dark:border-crisis-700 p-4 sm:p-5 rounded-xl shadow-sm transition-colors space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-amber-500 shrink-0" />
+                  <span>Hoja de Ruta de Visitas Censales (Ventana 48 Horas)</span>
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                  Solicitudes enviadas por ciudadanos no censados desde la aplicación móvil para recibir una brigada en su vivienda.
+                </p>
+              </div>
+
+              <button
+                onClick={loadData}
+                disabled={loading}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-crisis-700 dark:hover:bg-crisis-600 text-slate-800 dark:text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-sky-600' : ''}`} />
+                <span>Actualizar Solicitudes</span>
+              </button>
+            </div>
+
+            {/* Métricas Rápidas */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">Total Solicitudes</span>
+                <p className="text-lg font-black text-slate-900 dark:text-white mt-0.5">{solicitudes.length}</p>
+              </div>
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800/40">
+                <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5" /> Pendientes (&lt;48h)
+                </span>
+                <p className="text-lg font-black text-amber-900 dark:text-amber-300 mt-0.5">
+                  {solicitudes.filter((s) => s.estado === 'PENDIENTE').length}
+                </p>
+              </div>
+              <div className="p-3 bg-sky-50 dark:bg-sky-950/30 rounded-xl border border-sky-200 dark:border-sky-800/40">
+                <span className="text-[11px] font-bold text-sky-700 dark:text-sky-400 flex items-center gap-1">
+                  <Truck className="w-3.5 h-3.5" /> Brigada en Camino
+                </span>
+                <p className="text-lg font-black text-sky-900 dark:text-sky-300 mt-0.5">
+                  {solicitudes.filter((s) => s.estado === 'EN_CAMINO').length}
+                </p>
+              </div>
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800/40">
+                <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Atendidas / Censadas
+                </span>
+                <p className="text-lg font-black text-emerald-900 dark:text-emerald-300 mt-0.5">
+                  {solicitudes.filter((s) => s.estado === 'ATENDIDO').length}
+                </p>
+              </div>
+            </div>
+
+            {/* Barra de Filtros y Búsqueda */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
+                {['TODOS', 'PENDIENTE', 'EN_CAMINO', 'ATENDIDO'].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setSolicitudFilter(st)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                      solicitudFilter === st
+                        ? 'bg-amber-600 text-white shadow'
+                        : 'bg-slate-100 dark:bg-crisis-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-crisis-700'
+                    }`}
+                  >
+                    {st === 'TODOS' ? 'Todas' : st === 'PENDIENTE' ? 'Pendientes' : st === 'EN_CAMINO' ? 'En Camino' : 'Atendidas'}
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar solicitante, cédula o sector..."
+                  value={solicitudSearch}
+                  onChange={(e) => setSolicitudSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Listado de Solicitudes en Tarjetas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {solicitudes
+              .filter((s) => {
+                if (solicitudFilter !== 'TODOS' && s.estado !== solicitudFilter) return false;
+                if (solicitudSearch.trim()) {
+                  const q = solicitudSearch.toLowerCase();
+                  const nom = (s.jefe_familia_nombre || '').toLowerCase();
+                  const ced = (s.jefe_familia_cedula || '').toLowerCase();
+                  const bar = (s.barrio_sector || '').toLowerCase();
+                  return nom.includes(q) || ced.includes(q) || bar.includes(q);
+                }
+                return true;
+              })
+              .map((sol) => {
+                // Cálculo de tiempo transcurrido / restante para el SLA de 48 horas
+                const horasTranscurridas = Math.floor((new Date() - new Date(sol.fecha_solicitud)) / (1000 * 60 * 60));
+                const horasRestantes = Math.max(0, 48 - horasTranscurridas);
+                const vencido = horasTranscurridas >= 48;
+
+                return (
+                  <div
+                    key={sol.id}
+                    className="bg-white dark:bg-crisis-800 border border-slate-200 dark:border-crisis-700 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3"
+                  >
+                    <div>
+                      {/* Cabecera Tarjeta */}
+                      <div className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                              {sol.jefe_familia_nombre}
+                            </h4>
+                          </div>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            Cédula: <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{sol.jefe_familia_cedula}</span>
+                          </p>
+                        </div>
+
+                        <span
+                          className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                            sol.estado === 'PENDIENTE'
+                              ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40'
+                              : sol.estado === 'EN_CAMINO'
+                              ? 'bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/40'
+                              : sol.estado === 'ATENDIDO'
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40'
+                              : 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/40'
+                          }`}
+                        >
+                          {sol.estado === 'PENDIENTE'
+                            ? 'Pendiente (48h)'
+                            : sol.estado === 'EN_CAMINO'
+                            ? 'En Camino'
+                            : sol.estado === 'ATENDIDO'
+                            ? 'Censado / Atendido'
+                            : 'Descartado'}
+                        </span>
+                      </div>
+
+                      {/* Detalles de Ubicación y Contacto */}
+                      <div className="mt-3 space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                          <span>Sector: <strong>{sol.barrio_sector}</strong></span>
+                        </div>
+
+                        {sol.direccion_referencia && (
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 pl-5">
+                            Ref: {sol.direccion_referencia}
+                          </p>
+                        )}
+
+                        {sol.telefono_contacto && (
+                          <div className="flex items-center gap-2 pt-1">
+                            <PhoneCall className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                            <span>Contacto: <strong className="font-mono">{sol.telefono_contacto}</strong></span>
+                            <div className="flex items-center gap-1.5 ml-auto">
+                              <a
+                                href={`tel:${sol.telefono_contacto}`}
+                                className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded text-[10px] font-bold"
+                              >
+                                Llamar
+                              </a>
+                              <a
+                                href={`https://wa.me/593${sol.telefono_contacto.replace(/\D/g, '').replace(/^0/, '')}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-bold"
+                              >
+                                WhatsApp
+                              </a>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Coordenadas GPS */}
+                        {(sol.latitud || sol.lat) && (
+                          <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+                            <span>GPS: {Number(sol.latitud || sol.lat).toFixed(4)}, {Number(sol.longitud || sol.lon).toFixed(4)}</span>
+                            <a
+                              href={`https://www.google.com/maps?q=${sol.latitud || sol.lat},${sol.longitud || sol.lon}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 font-semibold"
+                            >
+                              <Navigation className="w-3 h-3" /> Ver en Mapa
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Contador de Ventana de 48 Horas */}
+                      <div className="mt-3 p-2 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Solicitado hace: <strong>{horasTranscurridas}h</strong>
+                        </span>
+                        {sol.estado === 'PENDIENTE' ? (
+                          <span className={`text-[11px] font-bold flex items-center gap-1 ${
+                            vencido ? 'text-red-600 dark:text-red-400 animate-pulse' : 'text-amber-600 dark:text-amber-400'
+                          }`}>
+                            <Clock className="w-3.5 h-3.5" />
+                            {vencido ? 'Plazo de 48h Vencido' : `Restan ${horasRestantes}h de 48h`}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Atendido
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Acciones del Operador / Digitalizador */}
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-end gap-2">
+                      {sol.estado !== 'ATENDIDO' && (
+                        <button
+                          onClick={() => handleIniciarCensoDesdeSolicitud(sol)}
+                          className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition active:scale-95"
+                          title="Cargar estos datos en el formulario de censo para registrar la ficha familiar"
+                        >
+                          <Users className="w-3.5 h-3.5" />
+                          <span>Iniciar Ficha Censal</span>
+                        </button>
+                      )}
+
+                      {sol.estado !== 'ATENDIDO' && (
+                        <button
+                          onClick={() => handleMarcarSolicitudAtendida(sol.id)}
+                          className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 text-emerald-800 dark:text-emerald-300 rounded-lg text-xs font-bold transition"
+                        >
+                          Marcar Atendido
+                        </button>
+                      )}
+
+                      {sol.estado !== 'DESCARTADO' && (
+                        <button
+                          onClick={() => handleDescartarSolicitud(sol.id)}
+                          className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition"
+                          title="Descartar solicitud"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+
+          {solicitudes.length === 0 && (
+            <div className="p-8 text-center bg-white dark:bg-crisis-800 border border-slate-200 dark:border-crisis-700 rounded-xl text-slate-500 dark:text-slate-400 space-y-2">
+              <Clock className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600" />
+              <p className="font-bold text-sm text-slate-700 dark:text-slate-300">No hay solicitudes de censo registradas</p>
+              <p className="text-xs">
+                Cuando los ciudadanos no censados soliciten visita desde la aplicación móvil, aparecerán aquí con su geolocalización y plazo de 48 horas.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ========================================================================= */}
       {showBodegaModal && (
         <div className="fixed inset-0 z-[1500] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">

@@ -11,7 +11,8 @@ class ZonaRiesgoGeoSerializer(GeoFeatureModelSerializer):
         geo_field = 'geometria'
         fields = [
             'id', 'nombre', 'tipo_evento', 'nivel_riesgo',
-            'descripcion', 'activo', 'fecha_levantamiento', 'fuente_informacion'
+            'descripcion', 'activo', 'fecha_levantamiento', 'fuente_informacion',
+            'alerta_activa', 'nivel_alerta', 'mensaje_alerta', 'instrucciones_alerta', 'fecha_alerta'
         ]
 
 class CapaHidricaVialGeoSerializer(GeoFeatureModelSerializer):

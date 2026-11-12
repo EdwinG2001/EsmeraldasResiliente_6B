@@ -96,3 +96,49 @@ class InventarioBodega(models.Model):
     def __str__(self):
         return f"{self.bodega.nombre}: {self.suministro.nombre_suministro} ({self.cantidad_disponible})"
 
+class SolicitudCenso(models.Model):
+    ESTADOS = [
+        ('PENDIENTE', 'Pendiente (48h)'),
+        ('EN_CAMINO', 'Brigada en Camino'),
+        ('ATENDIDO', 'Censado / Atendido'),
+        ('DESCARTADO', 'Descartado'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='solicitudes_censo'
+    )
+    jefe_familia_nombre = models.CharField(max_length=180)
+    jefe_familia_cedula = models.CharField(max_length=10)
+    telefono_contacto = models.CharField(max_length=20, null=True, blank=True)
+    barrio_sector = models.CharField(max_length=120)
+    direccion_referencia = models.TextField(null=True, blank=True)
+    latitud = models.DecimalField(max_digits=10, decimal_places=6, null=True, blank=True)
+    longitud = models.DecimalField(max_digits=10, decimal_places=6, null=True, blank=True)
+    ubicacion = models.PointField(srid=4326, null=True, blank=True)
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='PENDIENTE')
+    atendido_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='solicitudes_atendidas'
+    )
+    observaciones = models.TextField(null=True, blank=True)
+    fecha_solicitud = models.DateTimeField(auto_now_add=True)
+    fecha_atencion = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'solicitudes_censo'
+        verbose_name = 'Solicitud de Censo'
+        verbose_name_plural = 'Solicitudes de Censo'
+        ordering = ['-fecha_solicitud']
+
+    def __str__(self):
+        return f"{self.jefe_familia_nombre} ({self.jefe_familia_cedula}) - {self.barrio_sector} [{self.estado}]"
+
+

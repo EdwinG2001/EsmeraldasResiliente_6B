@@ -29,6 +29,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { reportsApi } from '../../api/reportsApi';
+import { gisApi } from '../../api/gisApi';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -196,13 +197,25 @@ export const IncidentCommandPage = () => {
     }
   };
 
-  const handleEmitSectorAlert = (e) => {
+  const handleEmitSectorAlert = async (e) => {
     e.preventDefault();
-    setAlertSuccess(true);
-    setTimeout(() => {
-      setAlertSuccess(false);
-      setShowAlertModal(false);
-    }, 2500);
+    try {
+      await gisApi.emitirAlertaSectorial({
+        sector: sectorAlert.sector,
+        nivel: sectorAlert.nivel,
+        tipo: sectorAlert.tipo,
+        mensaje: sectorAlert.mensaje,
+        instrucciones: sectorAlert.instrucciones,
+        activar: true
+      });
+      setAlertSuccess(true);
+      setTimeout(() => {
+        setAlertSuccess(false);
+        setShowAlertModal(false);
+      }, 2500);
+    } catch (err) {
+      alert('Error emitiendo alerta sectorial: ' + (err.response?.data?.detail || err.message));
+    }
   };
 
   // Filtrado reactivo en cliente gobernado por estado, gravedad, categoría, verificación y búsqueda

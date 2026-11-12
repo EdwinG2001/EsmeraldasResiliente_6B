@@ -6,7 +6,9 @@ from .views import (
     BodegaAcopioDetailAPIView,
     CatalogoSuministrosListCreateAPIView,
     CatalogoSuministroDetailAPIView,
-    InventarioBodegasStockAPIView
+    InventarioBodegasStockAPIView,
+    SolicitudesCensoListCreateAPIView,
+    SolicitudCensoDetailAPIView
 )
 
 urlpatterns = [
@@ -16,6 +18,10 @@ urlpatterns = [
     path('censo-familias/verificar/<str:cedula>/', VerificarCensoCiudadanoAPIView.as_view(), name='humanitaria-censo-verificar'),
     path('censo-familias/verificar/', VerificarCensoCiudadanoAPIView.as_view(), name='humanitaria-censo-verificar-param'),
     
+    # Solicitudes de Censo de Familias (Ventana de 48h)
+    path('solicitudes-censo/', SolicitudesCensoListCreateAPIView.as_view(), name='humanitaria-solicitudes-censo'),
+    path('solicitudes-censo/<uuid:pk>/', SolicitudCensoDetailAPIView.as_view(), name='humanitaria-solicitud-censo-detail'),
+
     # Bodegas de Acopio CRUD
     path('bodegas/', BodegasAcopioListCreateAPIView.as_view(), name='bodegas-list-create'),
     path('bodegas/<int:pk>/', BodegaAcopioDetailAPIView.as_view(), name='bodega-detail'),

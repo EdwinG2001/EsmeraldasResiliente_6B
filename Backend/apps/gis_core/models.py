@@ -1,4 +1,5 @@
 from django.contrib.gis.db import models
+from django.conf import settings
 
 class ZonaRiesgo(models.Model):
     id = models.AutoField(primary_key=True)
@@ -14,6 +15,20 @@ class ZonaRiesgo(models.Model):
     activo = models.BooleanField(default=True)
     fecha_levantamiento = models.DateField(null=True, blank=True)
     fuente_informacion = models.CharField(max_length=150, null=True, blank=True)
+
+    # Gobernanza dinámica de alerta (Activada por Gestor / Operador / Admin)
+    alerta_activa = models.BooleanField(default=False)
+    nivel_alerta = models.CharField(max_length=20, default='ROJA', blank=True)
+    mensaje_alerta = models.TextField(null=True, blank=True)
+    instrucciones_alerta = models.TextField(null=True, blank=True)
+    fecha_alerta = models.DateTimeField(null=True, blank=True)
+    emitida_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='alertas_emitidas'
+    )
 
     class Meta:
         db_table = 'zonas_riesgo'

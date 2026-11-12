@@ -18,8 +18,10 @@ if os.name == 'nt':
                 os.add_dll_directory(POSTGRES_BIN)
             except Exception:
                 pass
-        GDAL_LIBRARY_PATH = os.path.join(POSTGRES_BIN, 'libgdal-35.dll')
-        GEOS_LIBRARY_PATH = os.path.join(POSTGRES_BIN, 'libgeos_c.dll')
+        gdal_candidate = os.path.join(POSTGRES_BIN, 'libgdal-35.dll')
+        if os.path.exists(gdal_candidate):
+            GDAL_LIBRARY_PATH = gdal_candidate
+            GEOS_LIBRARY_PATH = os.path.join(POSTGRES_BIN, 'libgeos_c.dll')
         proj_dir = r'C:\Program Files\PostgreSQL\18\share\contrib\postgis-3.6\proj'
         if os.path.exists(proj_dir):
             os.environ['PROJ_LIB'] = proj_dir

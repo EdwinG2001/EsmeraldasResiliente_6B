@@ -71,4 +71,22 @@ export const humanitarianApi = {
     const res = await apiClient.get('/humanitaria/inventario/');
     return res.data?.results || res.data;
   },
+
+  // Solicitudes de Censo de Familias (Ventana de 48h)
+  getSolicitudesCenso: async (params = {}) => {
+    const res = await apiClient.get('/humanitaria/solicitudes-censo/', { params });
+    return res.data?.results || res.data;
+  },
+  crearSolicitudCenso: async (data) => {
+    const res = await apiClient.post('/humanitaria/solicitudes-censo/', data);
+    return res.data;
+  },
+  actualizarSolicitudCenso: async (id, data) => {
+    const res = await apiClient.patch(`/humanitaria/solicitudes-censo/${id}/`, data);
+    return res.data;
+  },
+  eliminarSolicitudCenso: async (id) => {
+    const res = await apiClient.delete(`/humanitaria/solicitudes-censo/${id}/`);
+    return res.data;
+  },
 };

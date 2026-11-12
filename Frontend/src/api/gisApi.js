@@ -1,9 +1,17 @@
 import apiClient from './client';
 
 export const gisApi = {
-  getZonasRiesgo: async () => {
-    const res = await apiClient.get('/gis/zonas-riesgo/');
+  getZonasRiesgo: async (params = {}) => {
+    const res = await apiClient.get('/gis/zonas-riesgo/', { params });
     return res.data?.results || res.data;
+  },
+  getAlertasActivas: async () => {
+    const res = await apiClient.get('/gis/zonas-riesgo/alerta-sectorial/');
+    return res.data?.results || res.data;
+  },
+  emitirAlertaSectorial: async (payload) => {
+    const res = await apiClient.post('/gis/zonas-riesgo/alerta-sectorial/', payload);
+    return res.data;
   },
   getRedHidricaVial: async () => {
     const res = await apiClient.get('/gis/red-hidrica-vial/');
