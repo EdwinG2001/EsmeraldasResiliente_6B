@@ -25,25 +25,26 @@ html.light, body.light {
   color: #0f172a;
 }
 
-.light .bg-crisis-900,
-.light [class*="bg-crisis-900"] {
+.light .bg-crisis-950 {
+  background-color: #f1f5f9 !important;
+}
+
+.light .bg-crisis-900 {
   background-color: #f8fafc !important;
 }
 
-.light .bg-crisis-800,
-.light [class*="bg-crisis-800"] {
+.light .bg-crisis-800 {
   background-color: #ffffff !important;
   box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05);
 }
 
-.light .bg-crisis-700,
-.light [class*="bg-crisis-700"]:not(button):not(a) {
+.light .bg-crisis-700:not(button):not(a) {
   background-color: #f1f5f9 !important;
 }
 
+.light .border-crisis-800,
 .light .border-crisis-700,
-.light .border-crisis-600,
-.light [class*="border-crisis-"] {
+.light .border-crisis-600 {
   border-color: #e2e8f0 !important;
 }
 
@@ -52,27 +53,7 @@ html.light, body.light {
 .light h2:not([class*="text-sky"]):not([class*="text-emerald"]):not([class*="text-red"]):not([class*="text-amber"]),
 .light h3:not([class*="text-sky"]):not([class*="text-emerald"]):not([class*="text-red"]):not([class*="text-amber"]),
 .light h4:not([class*="text-sky"]):not([class*="text-emerald"]):not([class*="text-red"]):not([class*="text-amber"]) {
-  color: #0f172a !important;
-}
-
-/* En modo claro, los textos blancos generales sin fondo se adaptan a oscuro */
-.light .text-white:not(button):not(a):not(span[class*="bg-"]):not(div[class*="bg-"]):not([class*="bg-"]) {
   color: #0f172a;
-}
-
-/* Fondos oscuros adaptados a claro (incluyendo modificadores /80, /90, /95) */
-.light .bg-slate-900,
-.light .bg-slate-800,
-.light [class*="bg-slate-900"]:not(button):not(a),
-.light [class*="bg-slate-800"]:not(button):not(a) {
-  background-color: #ffffff !important;
-}
-
-.light .border-slate-800,
-.light .border-slate-700,
-.light [class*="border-slate-800"],
-.light [class*="border-slate-700"] {
-  border-color: #e2e8f0 !important;
 }
 
 /* Inputs, Textareas y Selects */
@@ -232,24 +213,37 @@ html.dark, body.dark {
 
 /* Botón cerrar X de Popups Leaflet */
 .leaflet-popup-close-button {
-  width: 26px !important;
-  height: 26px !important;
+  width: 28px !important;
+  height: 28px !important;
   font-size: 18px !important;
-  line-height: 24px !important;
+  font-weight: bold !important;
+  line-height: 28px !important;
   text-align: center !important;
-  color: #94a3b8 !important;
+  color: #475569 !important;
+  background: rgba(148, 163, 184, 0.25) !important;
   padding: 0 !important;
-  top: 8px !important;
-  right: 8px !important;
-  border-radius: 6px !important;
+  top: 10px !important;
+  right: 10px !important;
+  border-radius: 9999px !important;
   transition: all 0.2s ease !important;
   z-index: 1000 !important;
   cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15) !important;
 }
 
-.leaflet-popup-close-button:hover {
-  color: #ef4444 !important;
-  background-color: rgba(239, 68, 68, 0.15) !important;
+.dark .leaflet-popup-close-button {
+  color: #e2e8f0 !important;
+  background: rgba(51, 65, 85, 0.7) !important;
+}
+
+.leaflet-popup-close-button:hover,
+.dark .leaflet-popup-close-button:hover {
+  color: #ffffff !important;
+  background: #ef4444 !important;
+  transform: scale(1.08);
 }
 
 ::-webkit-scrollbar {

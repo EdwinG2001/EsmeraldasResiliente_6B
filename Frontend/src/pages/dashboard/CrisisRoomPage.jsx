@@ -344,8 +344,14 @@ const isValidGeoJson = (data) => {
 };
 
 // Componente para detectar movimiento del mapa y volar a cantones
-function MapController({ onCenterChange, targetFly }) {
+function MapController({ onCenterChange, targetFly, mapRefCallback }) {
   const map = useMap();
+
+  useEffect(() => {
+    if (mapRefCallback) {
+      mapRefCallback(map);
+    }
+  }, [map, mapRefCallback]);
 
   useEffect(() => {
     if (targetFly) {
@@ -593,7 +599,9 @@ export const CrisisRoomPage = () => {
   // 'temp': Temperatura | 'rain': Precipitaciones | 'wind': Viento | 'clouds': Nubosidad | 'storm': Tormentas
   const [weatherMode, setWeatherMode] = useState('temp');
   const [consoleExpanded, setConsoleExpanded] = useState(true);
-  const [topControlsExpanded, setTopControlsExpanded] = useState(true);
+  // Barra superior de controles del radar meteorológico: inicia retraída por defecto para maximizar visualización del mapa
+  const [topControlsExpanded, setTopControlsExpanded] = useState(false);
+  const leafletMapRef = useRef(null);
 
   // Mapa base: 'calles' (Esri AWS sin marca de agua) | 'sat' (Esri Satélite HD) | 'osm' (Francia) | 'carto' (Voyager)
   const [baseMap, setBaseMap] = useState('calles');
@@ -723,14 +731,21 @@ export const CrisisRoomPage = () => {
     };
   }, [searchParams]);
 
-  // Apertura controlada por una sola vez del popup del incidente enfocado (evita que se quede bloqueado al cerrar)
+  // Apertura controlada por una sola vez del popup del incidente enfocado y gestión limpia del botón 'x' de cierre
   useEffect(() => {
-    // Interceptar clics en el botón de cerrar 'x' de Leaflet para evitar hash '#close' y briqueo de navegación
+    // Manejo fluido de clics en el botón de cerrar 'x' de Leaflet sin bloquear eventos nativos
     const handlePopupCloseClick = (e) => {
       const closeBtn = e.target.closest('.leaflet-popup-close-button');
       if (closeBtn) {
-        e.preventDefault();
-        e.stopPropagation();
+        if (e.target.tagName === 'A' || closeBtn.tagName === 'A') {
+          e.preventDefault();
+        }
+        // Asegurar el cierre del popup desde la instancia del mapa
+        if (leafletMapRef.current) {
+          try {
+            leafletMapRef.current.closePopup();
+          } catch (_) {}
+        }
         setSelectedIncidentId(null);
         if (searchParams.get('focusIncident')) {
           const newParams = new URLSearchParams(searchParams);
@@ -741,10 +756,10 @@ export const CrisisRoomPage = () => {
         }
       }
     };
-    document.addEventListener('click', handlePopupCloseClick, true);
+    document.addEventListener('click', handlePopupCloseClick, false);
 
     const focusIncidentId = searchParams.get('focusIncident');
-    if (!focusIncidentId) return () => document.removeEventListener('click', handlePopupCloseClick, true);
+    if (!focusIncidentId) return () => document.removeEventListener('click', handlePopupCloseClick, false);
 
     if (openedFocusIncidentRef.current !== focusIncidentId) {
       const marker = incidentMarkerRefs.current[focusIncidentId];
@@ -757,12 +772,12 @@ export const CrisisRoomPage = () => {
         }, 600);
         return () => {
           clearTimeout(timer);
-          document.removeEventListener('click', handlePopupCloseClick, true);
+          document.removeEventListener('click', handlePopupCloseClick, false);
         };
       }
     }
 
-    return () => document.removeEventListener('click', handlePopupCloseClick, true);
+    return () => document.removeEventListener('click', handlePopupCloseClick, false);
   }, [searchParams, activeIncidentFeatures]);
 
   // Línea de tiempo interactiva (MSN El Tiempo Timeline)
@@ -1443,6 +1458,7 @@ export const CrisisRoomPage = () => {
             <MapController
               onCenterChange={handleMapCenterChanged}
               targetFly={targetFly}
+              mapRefCallback={(m) => { leafletMapRef.current = m; }}
             />
 
             {/* 1. MAPA BASE CON BUFFER ALTO Y SIN BLOQUEOS DE ZOOM */}
@@ -1504,7 +1520,7 @@ export const CrisisRoomPage = () => {
                     click: () => handleSelectCanton(c),
                   }}
                 >
-                  <Popup>
+                  <Popup autoPan={false}>
                     <div className="text-xs space-y-1 min-w-[150px]">
                       <p className="font-bold text-sky-400 text-sm">{c.nombre}</p>
                       <p className="text-slate-300">
@@ -1575,9 +1591,9 @@ export const CrisisRoomPage = () => {
                     dragend: handleShelterDragEnd(albId, p.nombre),
                   }}
                 >
-                  <Popup>
+                  <Popup autoPan={false}>
                     <div className="text-xs space-y-2 min-w-[220px] p-1 text-slate-800 dark:text-slate-200">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700/80 pb-1.5 pr-6">
                         <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider text-[10px]">
                           <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span>
                           <span>Albergue y Refugio Seguro</span>
@@ -1679,10 +1695,10 @@ export const CrisisRoomPage = () => {
                     dragend: handleInfraDragEnd(infraId, p.nombre),
                   }}
                 >
-                  <Popup>
+                  <Popup autoPan={false}>
                     <div className="text-xs space-y-2 min-w-[240px] max-w-[280px] p-1 text-slate-800 dark:text-slate-200">
                       {/* Cabecera Tipo y Badge Admin */}
-                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700/80 pb-1.5">
+                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700/80 pb-1.5 pr-6">
                         <span className={`font-black uppercase tracking-wider text-[10px] flex items-center gap-1.5 ${isBombero
                             ? 'text-amber-600 dark:text-amber-400'
                             : 'text-red-600 dark:text-red-400'
@@ -1847,6 +1863,7 @@ export const CrisisRoomPage = () => {
                       maxWidth={340}
                       autoClose={true}
                       closeOnClick={true}
+                      autoPan={false}
                     >
                       <div className="text-xs space-y-2 p-1 text-slate-800 dark:text-slate-200">
                         {/* Cabecera: Tipo de evento y Nivel de Gravedad */}

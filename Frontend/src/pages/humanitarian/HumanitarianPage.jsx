@@ -651,7 +651,7 @@ export const HumanitarianPage = () => {
                               </span>
                             ) : (
                               <span 
-                                className="inline-flex items-center gap-1 font-mono bg-slate-200/80 dark:bg-crisis-800 px-1.5 py-0.2 rounded text-[10.5px] text-slate-600 dark:text-slate-300 blur-[4.5px] select-none"
+                                className="inline-flex items-center gap-1 font-mono bg-slate-200 dark:bg-crisis-800 border border-slate-300 dark:border-crisis-700 px-1.5 py-0.2 rounded text-[10.5px] text-slate-700 dark:text-slate-300 blur-[4px] select-none"
                                 title="Dato privado protegido (Requiere rol: Admin, Gestor, Operador o Digitalizador)"
                               >
                                 <Lock className="w-2.5 h-2.5 text-amber-500 inline shrink-0" />
@@ -669,7 +669,7 @@ export const HumanitarianPage = () => {
                                 </span>
                               ) : (
                                 <span 
-                                  className="inline-flex items-center gap-1 font-mono bg-slate-200/80 dark:bg-crisis-800 px-1.5 py-0.2 rounded text-[10.5px] text-slate-600 dark:text-slate-300 blur-[4.5px] select-none"
+                                  className="inline-flex items-center gap-1 font-mono bg-slate-200 dark:bg-crisis-800 border border-slate-300 dark:border-crisis-700 px-1.5 py-0.2 rounded text-[10.5px] text-slate-700 dark:text-slate-300 blur-[4px] select-none"
                                   title="Teléfono protegido por privacidad (Requiere rol autorizado)"
                                 >
                                   <Lock className="w-2.5 h-2.5 text-amber-500 inline shrink-0" />
@@ -1240,7 +1240,7 @@ export const HumanitarianPage = () => {
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm text-slate-500 dark:text-slate-400 blur-[4.5px] select-none bg-slate-200/80 dark:bg-crisis-800 px-2 py-0.5 rounded">
+                        <span className="font-mono text-sm text-slate-700 dark:text-slate-300 blur-[4px] select-none bg-slate-200 dark:bg-crisis-800 border border-slate-300 dark:border-crisis-700 px-2 py-0.5 rounded">
                           {selectedFamilia.jefe_familia_cedula || '0801234567'}
                         </span>
                         <span className="text-[9px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
@@ -1269,7 +1269,7 @@ export const HumanitarianPage = () => {
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm text-slate-500 dark:text-slate-400 blur-[4.5px] select-none bg-slate-200/80 dark:bg-crisis-800 px-2 py-0.5 rounded">
+                        <span className="font-mono text-sm text-slate-700 dark:text-slate-300 blur-[4px] select-none bg-slate-200 dark:bg-crisis-800 border border-slate-300 dark:border-crisis-700 px-2 py-0.5 rounded">
                           {selectedFamilia.telefono_contacto || '0991234567'}
                         </span>
                         <span className="text-[9px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
