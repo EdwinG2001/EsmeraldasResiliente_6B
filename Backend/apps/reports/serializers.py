@@ -51,7 +51,7 @@ class CrearReporteSerializer(serializers.ModelSerializer):
     lat = serializers.FloatField(write_only=True, required=False)
     lon = serializers.FloatField(write_only=True, required=False)
     lng = serializers.FloatField(write_only=True, required=False)
-    nombre_informante = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    nombre_informante = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
     radio_analisis_metros = serializers.DecimalField(max_digits=6, decimal_places=2, required=False, default=25.0)
     fecha_incidente = serializers.DateTimeField(required=False, default=timezone.now)
 
