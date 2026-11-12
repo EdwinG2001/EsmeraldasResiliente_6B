@@ -160,7 +160,6 @@ class SolicitudesCensoListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        user = self.request.user
         qs = SolicitudCenso.objects.all().order_by('-fecha_solicitud')
         
         # Filtros opcionales
@@ -175,19 +174,6 @@ class SolicitudesCensoListCreateAPIView(generics.ListCreateAPIView):
         sector = self.request.query_params.get('sector')
         if sector:
             qs = qs.filter(barrio_sector__icontains=sector.strip())
-
-        # Si el usuario no es personal autorizado (Operador, Digitalizador, Admin),
-        # solo puede ver sus propias solicitudes por cédula o id de usuario
-        if not user.is_authenticated or not (
-            user.is_superuser or 
-            getattr(user, 'rol', None) in ['ADMINISTRADOR', 'OPERADOR', 'OPERADOR_COE', 'DIGITALIZADOR']
-        ):
-            if user.is_authenticated:
-                qs = qs.filter(models.Q(usuario=user) | models.Q(jefe_familia_cedula=getattr(user, 'cedula', '')))
-            elif cedula:
-                qs = qs.filter(jefe_familia_cedula=cedula.strip())
-            else:
-                return SolicitudCenso.objects.none()
 
         return qs
 

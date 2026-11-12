@@ -25,8 +25,7 @@ import { EmergencyContactsModal } from '../common/EmergencyContactsModal';
 import { useAuth } from '../../context/AuthContext';
 
 export const Sidebar = ({ isOpen = false, onClose = () => {}, isDesktopOpen = true }) => {
-  const { isAuthenticated, isMasterAdmin, isOperador, isDigitalizador } = useAuth();
-  const canViewSolicitudes = Boolean(isAuthenticated && (isMasterAdmin || isOperador || isDigitalizador));
+  const { isAuthenticated } = useAuth();
   const [showContactsModal, setShowContactsModal] = useState(false);
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -68,15 +67,6 @@ export const Sidebar = ({ isOpen = false, onClose = () => {}, isDesktopOpen = tr
       icon: HeartHandshake,
       isPublic: false,
     },
-    ...(canViewSolicitudes ? [
-      {
-        to: '/humanitaria?tab=solicitudes',
-        label: 'Solicitudes de Censo',
-        icon: Clock,
-        badge: '48h',
-        isPublic: false,
-      }
-    ] : []),
   ];
 
   // Si no está autenticado (Modo Visitante), SOLO se muestran 2 módulos en navegación:

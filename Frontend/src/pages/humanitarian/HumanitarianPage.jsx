@@ -27,7 +27,10 @@ import {
   Clock,
   PhoneCall,
   Navigation,
-  Truck
+  Truck,
+  List,
+  LayoutGrid,
+  MessageSquare
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { humanitarianApi } from '../../api/humanitarianApi';
@@ -82,6 +85,7 @@ export const HumanitarianPage = () => {
   const [solicitudes, setSolicitudes] = useState([]);
   const [solicitudFilter, setSolicitudFilter] = useState('TODOS');
   const [solicitudSearch, setSolicitudSearch] = useState('');
+  const [solicitudViewMode, setSolicitudViewMode] = useState('tabla'); // 'tabla' | 'tarjetas'
   const [loading, setLoading] = useState(true);
 
   // Modal / Ventanita flotante para ver detalle completo de ficha censal
@@ -1037,7 +1041,7 @@ export const HumanitarianPage = () => {
               </div>
             </div>
 
-            {/* Barra de Filtros y Búsqueda */}
+            {/* Barra de Filtros, Búsqueda y Selector de Vista */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
               <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
                 {['TODOS', 'PENDIENTE', 'EN_CAMINO', 'ATENDIDO'].map((st) => (
@@ -1055,194 +1059,416 @@ export const HumanitarianPage = () => {
                 ))}
               </div>
 
-              <div className="relative w-full sm:w-72">
-                <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar solicitante, cédula o sector..."
-                  value={solicitudSearch}
-                  onChange={(e) => setSolicitudSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
-                />
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-72">
+                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar solicitante, cédula o sector..."
+                    value={solicitudSearch}
+                    onChange={(e) => setSolicitudSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                {/* Alternador de Vista Tabla / Tarjetas */}
+                <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-crisis-900 p-0.5 rounded-lg border border-slate-300 dark:border-crisis-700 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setSolicitudViewMode('tabla')}
+                    className={`px-2.5 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition ${
+                      solicitudViewMode === 'tabla'
+                        ? 'bg-white dark:bg-crisis-700 text-sky-700 dark:text-white shadow-xs font-bold'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                    title="Vista Tabla"
+                  >
+                    <List className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Tabla</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSolicitudViewMode('tarjetas')}
+                    className={`px-2.5 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition ${
+                      solicitudViewMode === 'tarjetas'
+                        ? 'bg-white dark:bg-crisis-700 text-sky-700 dark:text-white shadow-xs font-bold'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                    title="Vista Tarjetas"
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Tarjetas</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Listado de Solicitudes en Tarjetas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {solicitudes
-              .filter((s) => {
-                if (solicitudFilter !== 'TODOS' && s.estado !== solicitudFilter) return false;
-                if (solicitudSearch.trim()) {
-                  const q = solicitudSearch.toLowerCase();
-                  const nom = (s.jefe_familia_nombre || '').toLowerCase();
-                  const ced = (s.jefe_familia_cedula || '').toLowerCase();
-                  const bar = (s.barrio_sector || '').toLowerCase();
-                  return nom.includes(q) || ced.includes(q) || bar.includes(q);
-                }
-                return true;
-              })
-              .map((sol) => {
-                // Cálculo de tiempo transcurrido / restante para el SLA de 48 horas
-                const horasTranscurridas = Math.floor((new Date() - new Date(sol.fecha_solicitud)) / (1000 * 60 * 60));
-                const horasRestantes = Math.max(0, 48 - horasTranscurridas);
-                const vencido = horasTranscurridas >= 48;
+          {/* Listado de Solicitudes: VISTA TABLA (Por defecto) */}
+          {solicitudViewMode === 'tabla' && (
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-crisis-700 bg-white dark:bg-crisis-800 shadow-sm transition-colors">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-crisis-900 border-b border-slate-200 dark:border-crisis-700 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider text-[11px]">
+                    <th className="py-3 px-3.5 whitespace-nowrap">Estado / SLA (48h)</th>
+                    <th className="py-3 px-3.5 whitespace-nowrap">Cédula</th>
+                    <th className="py-3 px-3.5">Jefe de Hogar</th>
+                    <th className="py-3 px-3.5">Sector / Barrio</th>
+                    <th className="py-3 px-3.5 whitespace-nowrap">Contacto</th>
+                    <th className="py-3 px-3.5 whitespace-nowrap">Geolocalización</th>
+                    <th className="py-3 px-3.5 text-right whitespace-nowrap">Acciones Brigada</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-crisis-700/60">
+                  {solicitudes
+                    .filter((s) => {
+                      if (solicitudFilter !== 'TODOS' && s.estado !== solicitudFilter) return false;
+                      if (solicitudSearch.trim()) {
+                        const q = solicitudSearch.toLowerCase();
+                        const nom = (s.jefe_familia_nombre || '').toLowerCase();
+                        const ced = (s.jefe_familia_cedula || '').toLowerCase();
+                        const bar = (s.barrio_sector || '').toLowerCase();
+                        return nom.includes(q) || ced.includes(q) || bar.includes(q);
+                      }
+                      return true;
+                    })
+                    .map((sol) => {
+                      const horasTranscurridas = Math.floor((new Date() - new Date(sol.fecha_solicitud)) / (1000 * 60 * 60));
+                      const horasRestantes = Math.max(0, 48 - horasTranscurridas);
+                      const vencido = horasTranscurridas >= 48;
 
-                return (
-                  <div
-                    key={sol.id}
-                    className="bg-white dark:bg-crisis-800 border border-slate-200 dark:border-crisis-700 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3"
-                  >
-                    <div>
-                      {/* Cabecera Tarjeta */}
-                      <div className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                              {sol.jefe_familia_nombre}
-                            </h4>
-                          </div>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                            Cédula: <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{sol.jefe_familia_cedula}</span>
-                          </p>
-                        </div>
-
-                        <span
-                          className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
-                            sol.estado === 'PENDIENTE'
-                              ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40'
-                              : sol.estado === 'EN_CAMINO'
-                              ? 'bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/40'
-                              : sol.estado === 'ATENDIDO'
-                              ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40'
-                              : 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/40'
-                          }`}
-                        >
-                          {sol.estado === 'PENDIENTE'
-                            ? 'Pendiente (48h)'
-                            : sol.estado === 'EN_CAMINO'
-                            ? 'En Camino'
-                            : sol.estado === 'ATENDIDO'
-                            ? 'Censado / Atendido'
-                            : 'Descartado'}
-                        </span>
-                      </div>
-
-                      {/* Detalles de Ubicación y Contacto */}
-                      <div className="mt-3 space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                          <span>Sector: <strong>{sol.barrio_sector}</strong></span>
-                        </div>
-
-                        {sol.direccion_referencia && (
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 pl-5">
-                            Ref: {sol.direccion_referencia}
-                          </p>
-                        )}
-
-                        {sol.telefono_contacto && (
-                          <div className="flex items-center gap-2 pt-1">
-                            <PhoneCall className="w-3.5 h-3.5 text-sky-500 shrink-0" />
-                            <span>Contacto: <strong className="font-mono">{sol.telefono_contacto}</strong></span>
-                            <div className="flex items-center gap-1.5 ml-auto">
-                              <a
-                                href={`tel:${sol.telefono_contacto}`}
-                                className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded text-[10px] font-bold"
+                      return (
+                        <tr key={sol.id} className="hover:bg-slate-50/80 dark:hover:bg-crisis-700/40 transition">
+                          <td className="py-3 px-3.5 whitespace-nowrap">
+                            <div className="flex flex-col gap-1">
+                              <span
+                                className={`inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border w-fit ${
+                                  sol.estado === 'PENDIENTE'
+                                    ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40'
+                                    : sol.estado === 'EN_CAMINO'
+                                    ? 'bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/40'
+                                    : sol.estado === 'ATENDIDO'
+                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40'
+                                    : 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/40'
+                                }`}
                               >
-                                Llamar
-                              </a>
+                                {sol.estado === 'PENDIENTE'
+                                  ? 'Pendiente (48h)'
+                                  : sol.estado === 'EN_CAMINO'
+                                  ? 'En Camino'
+                                  : sol.estado === 'ATENDIDO'
+                                  ? 'Censado / Atendido'
+                                  : 'Descartado'}
+                              </span>
+                              {sol.estado === 'PENDIENTE' ? (
+                                <span className={`text-[10px] font-bold flex items-center gap-1 ${vencido ? 'text-red-500 font-extrabold animate-pulse' : 'text-amber-600 dark:text-amber-400'}`}>
+                                  <Clock className="w-3 h-3" />
+                                  {vencido ? 'SLA 48h Vencido' : `Restan ${horasRestantes}h de 48h`}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                                  Hace {horasTranscurridas}h
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-3.5 whitespace-nowrap">
+                            <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs px-2 py-1 bg-slate-100 dark:bg-crisis-900 rounded-md border border-slate-200 dark:border-crisis-700">
+                              {sol.jefe_familia_cedula}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-3.5">
+                            <p className="font-bold text-slate-900 dark:text-white text-xs">{sol.jefe_familia_nombre}</p>
+                          </td>
+
+                          <td className="py-3 px-3.5">
+                            <div className="flex items-center gap-1 text-slate-800 dark:text-slate-200 font-semibold">
+                              <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                              <span>{sol.barrio_sector}</span>
+                            </div>
+                            {sol.direccion_referencia && (
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 pl-4">
+                                Ref: {sol.direccion_referencia}
+                              </p>
+                            )}
+                          </td>
+
+                          <td className="py-3 px-3.5 whitespace-nowrap">
+                            {sol.telefono_contacto ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{sol.telefono_contacto}</span>
+                                <a
+                                  href={`tel:${sol.telefono_contacto}`}
+                                  className="p-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded text-[10px] transition"
+                                  title="Llamar"
+                                >
+                                  <PhoneCall className="w-3 h-3 text-sky-500" />
+                                </a>
+                                <a
+                                  href={`https://wa.me/593${sol.telefono_contacto.replace(/\D/g, '').replace(/^0/, '')}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] transition"
+                                  title="WhatsApp"
+                                >
+                                  <MessageSquare className="w-3 h-3" />
+                                </a>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 text-[11px]">Sin teléfono</span>
+                            )}
+                          </td>
+
+                          <td className="py-3 px-3.5 whitespace-nowrap">
+                            {(sol.latitud || sol.lat) ? (
                               <a
-                                href={`https://wa.me/593${sol.telefono_contacto.replace(/\D/g, '').replace(/^0/, '')}`}
+                                href={`https://www.google.com/maps?q=${sol.latitud || sol.lat},${sol.longitud || sol.lon}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-bold"
+                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-sky-600 dark:text-sky-400 hover:underline"
                               >
-                                WhatsApp
+                                <Navigation className="w-3 h-3" />
+                                <span>{Number(sol.latitud || sol.lat).toFixed(3)}, {Number(sol.longitud || sol.lon).toFixed(3)}</span>
+                              </a>
+                            ) : (
+                              <span className="text-slate-400 text-[11px]">Sin GPS</span>
+                            )}
+                          </td>
+
+                          <td className="py-3 px-3.5 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {sol.estado !== 'ATENDIDO' && (
+                                <button
+                                  onClick={() => handleIniciarCensoDesdeSolicitud(sol)}
+                                  className="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-[11px] font-bold shadow-xs flex items-center gap-1 transition active:scale-95"
+                                  title="Iniciar Ficha Censal cargando datos automáticamente"
+                                >
+                                  <Users className="w-3 h-3" />
+                                  <span>Iniciar Ficha</span>
+                                </button>
+                              )}
+                              {sol.estado !== 'ATENDIDO' && (
+                                <button
+                                  onClick={() => handleMarcarSolicitudAtendida(sol.id)}
+                                  className="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 text-emerald-800 dark:text-emerald-300 rounded-lg text-[11px] font-bold transition flex items-center gap-1"
+                                  title="Marcar Atendido"
+                                >
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>Atendido</span>
+                                </button>
+                              )}
+                              {sol.estado !== 'DESCARTADO' && (
+                                <button
+                                  onClick={() => handleDescartarSolicitud(sol.id)}
+                                  className="p-1 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition"
+                                  title="Descartar solicitud"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Listado de Solicitudes: VISTA TARJETAS */}
+          {solicitudViewMode === 'tarjetas' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {solicitudes
+                .filter((s) => {
+                  if (solicitudFilter !== 'TODOS' && s.estado !== solicitudFilter) return false;
+                  if (solicitudSearch.trim()) {
+                    const q = solicitudSearch.toLowerCase();
+                    const nom = (s.jefe_familia_nombre || '').toLowerCase();
+                    const ced = (s.jefe_familia_cedula || '').toLowerCase();
+                    const bar = (s.barrio_sector || '').toLowerCase();
+                    return nom.includes(q) || ced.includes(q) || bar.includes(q);
+                  }
+                  return true;
+                })
+                .map((sol) => {
+                  const horasTranscurridas = Math.floor((new Date() - new Date(sol.fecha_solicitud)) / (1000 * 60 * 60));
+                  const horasRestantes = Math.max(0, 48 - horasTranscurridas);
+                  const vencido = horasTranscurridas >= 48;
+
+                  return (
+                    <div
+                      key={sol.id}
+                      className="bg-white dark:bg-crisis-800 border border-slate-200 dark:border-crisis-700 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3"
+                    >
+                      <div>
+                        {/* Cabecera Tarjeta */}
+                        <div className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                                {sol.jefe_familia_nombre}
+                              </h4>
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                              Cédula: <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{sol.jefe_familia_cedula}</span>
+                            </p>
+                          </div>
+
+                          <span
+                            className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                              sol.estado === 'PENDIENTE'
+                                ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40'
+                                : sol.estado === 'EN_CAMINO'
+                                ? 'bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/40'
+                                : sol.estado === 'ATENDIDO'
+                                ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40'
+                                : 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/40'
+                            }`}
+                          >
+                            {sol.estado === 'PENDIENTE'
+                              ? 'Pendiente (48h)'
+                              : sol.estado === 'EN_CAMINO'
+                              ? 'En Camino'
+                              : sol.estado === 'ATENDIDO'
+                              ? 'Censado / Atendido'
+                              : 'Descartado'}
+                          </span>
+                        </div>
+
+                        {/* Detalles de Ubicación y Contacto */}
+                        <div className="mt-3 space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                            <span>Sector: <strong>{sol.barrio_sector}</strong></span>
+                          </div>
+
+                          {sol.direccion_referencia && (
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 pl-5">
+                              Ref: {sol.direccion_referencia}
+                            </p>
+                          )}
+
+                          {sol.telefono_contacto && (
+                            <div className="flex items-center gap-2 pt-1">
+                              <PhoneCall className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                              <span>Contacto: <strong className="font-mono">{sol.telefono_contacto}</strong></span>
+                              <div className="flex items-center gap-1.5 ml-auto">
+                                <a
+                                  href={`tel:${sol.telefono_contacto}`}
+                                  className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded text-[10px] font-bold"
+                                >
+                                  Llamar
+                                </a>
+                                <a
+                                  href={`https://wa.me/593${sol.telefono_contacto.replace(/\D/g, '').replace(/^0/, '')}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-bold"
+                                >
+                                  WhatsApp
+                                </a>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Coordenadas GPS */}
+                          {(sol.latitud || sol.lat) && (
+                            <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+                              <span>GPS: {Number(sol.latitud || sol.lat).toFixed(4)}, {Number(sol.longitud || sol.lon).toFixed(4)}</span>
+                              <a
+                                href={`https://www.google.com/maps?q=${sol.latitud || sol.lat},${sol.longitud || sol.lon}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 font-semibold"
+                              >
+                                <Navigation className="w-3 h-3" /> Ver en Mapa
                               </a>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
 
-                        {/* Coordenadas GPS */}
-                        {(sol.latitud || sol.lat) && (
-                          <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
-                            <span>GPS: {Number(sol.latitud || sol.lat).toFixed(4)}, {Number(sol.longitud || sol.lon).toFixed(4)}</span>
-                            <a
-                              href={`https://www.google.com/maps?q=${sol.latitud || sol.lat},${sol.longitud || sol.lon}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 font-semibold"
-                            >
-                              <Navigation className="w-3 h-3" /> Ver en Mapa
-                            </a>
-                          </div>
-                        )}
+                        {/* Contador de Ventana de 48 Horas */}
+                        <div className="mt-3 p-2 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                            Solicitado hace: <strong>{horasTranscurridas}h</strong>
+                          </span>
+                          {sol.estado === 'PENDIENTE' ? (
+                            <span className={`text-[11px] font-bold flex items-center gap-1 ${
+                              vencido ? 'text-red-600 dark:text-red-400 animate-pulse' : 'text-amber-600 dark:text-amber-400'
+                            }`}>
+                              <Clock className="w-3.5 h-3.5" />
+                              {vencido ? 'Plazo de 48h Vencido' : `Restan ${horasRestantes}h de 48h`}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Atendido
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Contador de Ventana de 48 Horas */}
-                      <div className="mt-3 p-2 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                          Solicitado hace: <strong>{horasTranscurridas}h</strong>
-                        </span>
-                        {sol.estado === 'PENDIENTE' ? (
-                          <span className={`text-[11px] font-bold flex items-center gap-1 ${
-                            vencido ? 'text-red-600 dark:text-red-400 animate-pulse' : 'text-amber-600 dark:text-amber-400'
-                          }`}>
-                            <Clock className="w-3.5 h-3.5" />
-                            {vencido ? 'Plazo de 48h Vencido' : `Restan ${horasRestantes}h de 48h`}
-                          </span>
-                        ) : (
-                          <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Atendido
-                          </span>
+                      {/* Acciones del Operador / Digitalizador */}
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-end gap-2">
+                        {sol.estado !== 'ATENDIDO' && (
+                          <button
+                            onClick={() => handleIniciarCensoDesdeSolicitud(sol)}
+                            className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition active:scale-95"
+                            title="Cargar estos datos en el formulario de censo para registrar la ficha familiar"
+                          >
+                            <Users className="w-3.5 h-3.5" />
+                            <span>Iniciar Ficha Censal</span>
+                          </button>
+                        )}
+
+                        {sol.estado !== 'ATENDIDO' && (
+                          <button
+                            onClick={() => handleMarcarSolicitudAtendida(sol.id)}
+                            className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 text-emerald-800 dark:text-emerald-300 rounded-lg text-xs font-bold transition"
+                          >
+                            Marcar Atendido
+                          </button>
+                        )}
+
+                        {sol.estado !== 'DESCARTADO' && (
+                          <button
+                            onClick={() => handleDescartarSolicitud(sol.id)}
+                            className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition"
+                            title="Descartar solicitud"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
                     </div>
+                  );
+                })}
+            </div>
+          )}
 
-                    {/* Acciones del Operador / Digitalizador */}
-                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-end gap-2">
-                      {sol.estado !== 'ATENDIDO' && (
-                        <button
-                          onClick={() => handleIniciarCensoDesdeSolicitud(sol)}
-                          className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition active:scale-95"
-                          title="Cargar estos datos en el formulario de censo para registrar la ficha familiar"
-                        >
-                          <Users className="w-3.5 h-3.5" />
-                          <span>Iniciar Ficha Censal</span>
-                        </button>
-                      )}
-
-                      {sol.estado !== 'ATENDIDO' && (
-                        <button
-                          onClick={() => handleMarcarSolicitudAtendida(sol.id)}
-                          className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 text-emerald-800 dark:text-emerald-300 rounded-lg text-xs font-bold transition"
-                        >
-                          Marcar Atendido
-                        </button>
-                      )}
-
-                      {sol.estado !== 'DESCARTADO' && (
-                        <button
-                          onClick={() => handleDescartarSolicitud(sol.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition"
-                          title="Descartar solicitud"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-
-          {solicitudes.length === 0 && (
+          {/* Mensaje de Lista Vacía */}
+          {solicitudes.filter((s) => {
+            if (solicitudFilter !== 'TODOS' && s.estado !== solicitudFilter) return false;
+            if (solicitudSearch.trim()) {
+              const q = solicitudSearch.toLowerCase();
+              const nom = (s.jefe_familia_nombre || '').toLowerCase();
+              const ced = (s.jefe_familia_cedula || '').toLowerCase();
+              const bar = (s.barrio_sector || '').toLowerCase();
+              return nom.includes(q) || ced.includes(q) || bar.includes(q);
+            }
+            return true;
+          }).length === 0 && (
             <div className="p-8 text-center bg-white dark:bg-crisis-800 border border-slate-200 dark:border-crisis-700 rounded-xl text-slate-500 dark:text-slate-400 space-y-2">
               <Clock className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600" />
-              <p className="font-bold text-sm text-slate-700 dark:text-slate-300">No hay solicitudes de censo registradas</p>
+              <p className="font-bold text-sm text-slate-700 dark:text-slate-300">
+                {solicitudes.length === 0
+                  ? 'No hay solicitudes de censo registradas actualmente'
+                  : 'No se encontraron solicitudes con el filtro o búsqueda seleccionada'}
+              </p>
               <p className="text-xs">
-                Cuando los ciudadanos no censados soliciten visita desde la aplicación móvil, aparecerán aquí con su geolocalización y plazo de 48 horas.
+                Cuando los ciudadanos soliciten visita desde la aplicación móvil, aparecerán automáticamente en esta tabla con su geolocalización y plazo de atención de 48 horas.
               </p>
             </div>
           )}
