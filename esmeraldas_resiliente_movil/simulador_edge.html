@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Esmeraldas Resiliente Móvil - Simulador Interactivo (Edge)</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #070B12;
+      --card-bg: #0F172A;
+      --surface: #131D31;
+      --border: #223048;
+      --primary: #00B4D8;
+      --flood-red: #E63946;
+      --risk-yellow: #FBBF24;
+      --success: #10B981;
+      --coe-blue: #1D4ED8;
+      --text: #F8FAFC;
+      --muted: #94A3B8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px;
+    }
+    .header-banner {
+      width: 100%;
+      max-width: 1350px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(135deg, #0F172A 0%, #162440 100%);
+      padding: 18px 28px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      margin-bottom: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .logo-badge {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .badge-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--coe-blue);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 24px;
+      color: white;
+      box-shadow: 0 0 15px rgba(29, 78, 216, 0.6);
+    }
+    .tag-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(230, 57, 70, 0.15);
+      color: var(--flood-red);
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(230, 57, 70, 0.3);
+    }
+    .dot-pulse {
+      width: 7px;
+      height: 7px;
+      background: var(--flood-red);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.3); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    .phones-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 24px;
+      width: 100%;
+      max-width: 1350px;
+    }
+    .phone-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .phone-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .phone-device {
+      width: 310px;
+      height: 640px;
+      background: #000;
+      border-radius: 46px;
+      padding: 12px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 0 4px #263346, 0 0 0 6px #121824;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .screen {
+      flex: 1;
+      background: #090D16;
+      border-radius: 36px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .notch {
+      width: 90px;
+      height: 20px;
+      background: #000;
+      margin: 0 auto;
+      border-bottom-left-radius: 12px;
+      border-bottom-right-radius: 12px;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+    }
+    .app-bar {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      background: #0F1523;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 14px;
+    }
+    .content-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+    }
+    .bottom-bar {
+      height: 52px;
+      background: #0C101A;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 8px;
+    }
+    .tab-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 9px;
+      color: var(--muted);
+      cursor: pointer;
+      gap: 3px;
+    }
+    .tab-item.active {
+      color: var(--primary);
+      font-weight: bold;
+    }
+    /* Phone 1 Specific */
+    .glowing-triangle {
+      width: 120px;
+      height: 120px;
+      margin: 24px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .triangle-svg {
+      width: 100px;
+      height: 100px;
+      filter: drop-shadow(0 0 16px rgba(230, 57, 70, 0.7));
+      animation: pulse 1.8s infinite;
+    }
+    .red-btn {
+      width: 100%;
+      background: var(--flood-red);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 25px;
+      font-weight: 800;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(230, 57, 70, 0.5);
+      transition: all 0.2s;
+    }
+    .red-btn:hover { background: #d62828; }
+    /* Phone 2 Map */
+    #map-phone-2 {
+      width: 100%;
+      height: 100%;
+      background: #111;
+    }
+    .floating-card {
+      position: absolute;
+      top: 65px;
+      left: 12px;
+      right: 12px;
+      background: rgba(15, 23, 42, 0.95);
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      z-index: 800;
+      font-size: 11px;
+    }
+    /* Phone 3 Tracking */
+    .report-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .pill {
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .pill-crit { background: rgba(239, 68, 68, 0.2); color: #EF4444; }
+    .pill-med { background: rgba(245, 158, 11, 0.2); color: #F59E0B; }
+    .pill-ok { background: rgba(16, 185, 129, 0.2); color: #10B981; }
+    /* Phone 4 Evacuation */
+    #map-phone-4 {
+      width: 100%;
+      height: 170px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .switch-row {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 10px 0;
+    }
+    .blue-btn {
+      width: 100%;
+      background: #0284C7;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BANNER SALA DE CRISIS COE COMMAND (LIVE) -->
+  <div class="header-banner">
+    <div class="logo-badge">
+      <div class="badge-icon">A</div>
+      <div>
+        <h2 style="font-size: 18px; font-weight: 900; letter-spacing: 0.3px;">COE Command Dashboard - Esmeraldas (Live)</h2>
+        <p style="font-size: 12px; color: var(--muted); margin-top: 2px;">Simulador Visual de las 4 Pantallas de la App Flutter en Microsoft Edge</p>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span class="tag-live"><span class="dot-pulse"></span> CONECTADO A POSTGIS (AIVEN / RENDER)</span>
+      <button onclick="window.location.reload()" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer;">Actualizar Datos</button>
+    </div>
+  </div>
+
+  <!-- GRID DE LOS 4 TELÉFONOS (IDÉNTICO AL RENDER) -->
+  <div class="phones-grid">
+
+    <!-- PHONE 1: CITIZEN ALERT APP -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Citizen Alert App</div>
+      <div class="phone-device">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="app-bar">
+            <span>☰</span>
+            <span>Citizen Alert App</span>
+            <span style="color: var(--flood-red);">🔔</span>
+          </div>
+          <div class="content-body" style="justify-content: space-between; text-align: center;">
+            <div>
+              <p style="color: var(--flood-red); font-weight: 900; font-size: 13px; letter-spacing: 1px;">ALERT:</p>
+              <h3 style="font-size: 19px; font-weight: 900; margin-top: 4px; line-height: 1.2;">POTENTIAL FLOODING<br>at Esmeraldas</h3>
+              <p style="font-size: 10px; color: var(--muted); margin-top: 6px;">Sistema de Gestión de Alertas de Esmeraldas, Ecuador.</p>
+            </div>
+
+            <div class="glowing-triangle">
+              <svg class="triangle-svg" viewBox="0 0 100 100">
+                <polygon points="50,10 92,85 8,85" fill="rgba(230,57,70,0.12)" stroke="#E63946" stroke-width="6" stroke-linejoin="round"/>
+                <line x1="50" y1="36" x2="50" y2="62" stroke="#E63946" stroke-width="6" stroke-linecap="round"/>
+                <circle cx="50" cy="74" r="3.5" fill="#E63946"/>
+              </svg>
+            </div>
+
+            <div>
+              <p style="font-size: 10px; color: var(--muted); margin-bottom: 14px; line-height: 1.4;">Report Incident to activate civil defense and humanitarian rescue services.</p>
+              <button class="red-btn" onclick="alert('Abriendo formulario de emergencia móvil...')">Report Incident</button>
+            </div>
+          </div>
+          <div class="bottom-bar">
+            <div class="tab-item active"><span>⚠️</span><span>Alerts</span></div>
+            <div class="tab-item"><span>🗺️</span><span>Risk Map</span></div>
+            <div class="tab-item"><span>📡</span><span>Tracking</span></div>
+            <div class="tab-item"><span>🏠</span><span>Evac</span></div>
+            <div class="tab-item"><span>⚙️</span><span>Profile</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHONE 2: GIS RISK MAP -->
+    <div class="phone-wrapper">
+      <div class="phone-label">GIS Risk Map</div>
+      <div class="phone-device">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="app-bar">
+            <span>☰</span>
+            <span>GIS Risk Map</span>
+            <span style="font-size: 10px; background: var(--surface); padding: 3px 6px; border-radius: 4px; border: 1px solid var(--border);">Module 1</span>
+          </div>
+          <div style="flex: 1; position: relative;">
+            <div id="map-phone-2"></div>
+            <div class="floating-card">
+              <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                <span style="color: var(--flood-red);">📍 Flood Zone Details</span>
+                <span style="color: var(--muted); cursor: pointer;">✕</span>
+              </div>
+              <div style="display: flex; gap: 10px; margin-top: 6px; font-size: 10px;">
+                <span>🟥 High-Risk Flood</span>
+                <span>🟨 Yellow Polygons</span>
+              </div>
+            </div>
+          </div>
+          <div class="bottom-bar">
+            <div class="tab-item"><span>⚠️</span><span>Alerts</span></div>
+            <div class="tab-item active"><span>🗺️</span><span>Risk Map</span></div>
+            <div class="tab-item"><span>📡</span><span>Tracking</span></div>
+            <div class="tab-item"><span>🏠</span><span>Evac</span></div>
+            <div class="tab-item"><span>⚙️</span><span>Profile</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHONE 3: COE INCIDENT TRACKING -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Module 3 - COE Incident Tracking</div>
+      <div class="phone-device">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="app-bar">
+            <span>☰</span>
+            <span>COE Incident Tracking</span>
+            <span>🔔</span>
+          </div>
+          <div class="content-body" style="padding-top: 8px;">
+            <!-- Search & Filter -->
+            <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+              <input type="text" placeholder="🔍 Search..." style="flex: 1; background: var(--surface); border: 1px solid var(--border); color: white; padding: 6px 10px; border-radius: 8px; font-size: 11px;">
+              <span style="background: var(--surface); border: 1px solid var(--border); padding: 6px 8px; border-radius: 8px; font-size: 11px; font-weight: bold;">Este ▼</span>
+            </div>
+
+            <!-- List -->
+            <div class="report-card">
+              <span style="color: var(--flood-red); font-size: 16px;">📍</span>
+              <div style="flex: 1;">
+                <div style="font-weight: 700; font-size: 11px;">Geo-located Report</div>
+                <div style="font-size: 9px; color: var(--muted);">Esmeraldas, Ecuador • Ribera Teaone</div>
+                <div style="margin-top: 3px;"><span class="pill pill-crit">Critical</span> <span style="font-size: 9px; color: var(--muted);">• 150m</span></div>
+              </div>
+              <span style="font-size: 9px; color: var(--muted);">2h ago</span>
+            </div>
+
+            <div class="report-card">
+              <span style="color: var(--flood-red); font-size: 16px;">📍</span>
+              <div style="flex: 1;">
+                <div style="font-weight: 700; font-size: 11px;">Geo-located Report</div>
+                <div style="font-size: 9px; color: var(--muted);">Esmeraldas, Ecuador • 50 Casas</div>
+                <div style="margin-top: 3px;"><span class="pill pill-crit">Critical</span> <span style="font-size: 9px; color: var(--muted);">• 420m</span></div>
+              </div>
+              <span style="font-size: 9px; color: var(--muted);">10 min</span>
+            </div>
+
+            <div class="report-card">
+              <span style="color: var(--risk-yellow); font-size: 16px;">📍</span>
+              <div style="flex: 1;">
+                <div style="font-weight: 700; font-size: 11px;">Geo-located Report</div>
+                <div style="font-size: 9px; color: var(--muted);">Esmeraldas, Ecuador • Propicia 1</div>
+                <div style="margin-top: 3px;"><span class="pill pill-med">Medium</span> <span style="font-size: 9px; color: var(--muted);">• 950m</span></div>
+              </div>
+              <span style="font-size: 9px; color: var(--muted);">1h ago</span>
+            </div>
+
+            <div class="report-card">
+              <span style="color: var(--success); font-size: 16px;">📍</span>
+              <div style="flex: 1;">
+                <div style="font-weight: 700; font-size: 11px;">Live Located Report</div>
+                <div style="font-size: 9px; color: var(--muted);">Esmeraldas, Ecuador • Las Palmas</div>
+                <div style="margin-top: 3px;"><span class="pill pill-ok">Attended</span> <span style="font-size: 9px; color: var(--muted);">• 2.1km</span></div>
+              </div>
+              <span style="font-size: 9px; color: var(--muted);">3h ago</span>
+            </div>
+          </div>
+          <div class="bottom-bar">
+            <div class="tab-item"><span>⚠️</span><span>Alerts</span></div>
+            <div class="tab-item"><span>🗺️</span><span>Risk Map</span></div>
+            <div class="tab-item active"><span>📡</span><span>Tracking</span></div>
+            <div class="tab-item"><span>🏠</span><span>Evac</span></div>
+            <div class="tab-item"><span>⚙️</span><span>Profile</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHONE 4: EVACUATION & HELP -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Modules 4 & 5 - Evacuation & Help</div>
+      <div class="phone-device">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="app-bar">
+            <span>☰</span>
+            <span>Evacuation & Help</span>
+            <span>❓</span>
+          </div>
+          <div class="content-body" style="padding-top: 10px;">
+            <div style="background: var(--surface); border: 1px solid var(--border); padding: 8px 10px; border-radius: 8px; font-size: 10px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+              <span style="background: #0284C7; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px;">🧭</span>
+              <span>Calculated an optimal route to nearest Shelter</span>
+            </div>
+
+            <!-- Route Map -->
+            <div id="map-phone-4"></div>
+
+            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 20px;">🏠</span>
+              <div style="flex: 1;">
+                <div style="font-weight: bold; font-size: 11px;">Albergue Seguro 1</div>
+                <div style="font-size: 9px; color: var(--muted);">Refugio Temporal • Cupos: 185 libres</div>
+              </div>
+              <span style="color: var(--muted);">›</span>
+            </div>
+
+            <div class="switch-row">
+              <span style="font-size: 11px; font-weight: bold;">Family Help Status</span>
+              <input type="checkbox" checked style="accent-color: var(--success); width: 18px; height: 18px;">
+            </div>
+
+            <button class="blue-btn" onclick="alert('Cálculo de Ayuda Humanitaria:\n• 2 Kits de Alimentos (72h)\n• 4 Frazadas\n• 1 Kit Médico')">Calculate Help</button>
+          </div>
+          <div class="bottom-bar">
+            <div class="tab-item"><span>⚠️</span><span>Alerts</span></div>
+            <div class="tab-item"><span>🗺️</span><span>Risk Map</span></div>
+            <div class="tab-item"><span>📡</span><span>Tracking</span></div>
+            <div class="tab-item active"><span>🏠</span><span>Evac</span></div>
+            <div class="tab-item"><span>⚙️</span><span>Profile</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const RENDER_BASE_URL = 'https://esmeraldasresiliente-6b.onrender.com/api/v1';
+
+    // Inicializar Mapa 2 (Polígonos de Riesgo GIS OpenStreetMap)
+    const map2 = L.map('map-phone-2', { zoomControl: false }).setView([0.9695, -79.6550], 13);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map2);
+
+    // Polígono Rojo (Alto Riesgo Inundación - Ribera del Teaone)
+    const defaultPolyRed = L.polygon([
+      [0.9750, -79.6640],
+      [0.9820, -79.6580],
+      [0.9780, -79.6490],
+      [0.9690, -79.6510],
+      [0.9660, -79.6600]
+    ], {
+      color: '#E63946',
+      fillColor: '#E63946',
+      fillOpacity: 0.35,
+      weight: 2
+    }).addTo(map2);
+
+    // Polígonos Amarillos (Riesgo Medio)
+    const defaultPolyYellow = L.polygon([
+      [0.9660, -79.6600],
+      [0.9690, -79.6510],
+      [0.9580, -79.6450],
+      [0.9530, -79.6550]
+    ], {
+      color: '#FBBF24',
+      fillColor: '#FBBF24',
+      fillOpacity: 0.35,
+      weight: 1.5
+    }).addTo(map2);
+
+    L.marker([0.9740, -79.6570]).addTo(map2);
+    L.marker([0.9600, -79.6520]).addTo(map2);
+
+    // Conexión en vivo con PostGIS de Render para Zonas de Riesgo
+    fetch(`${RENDER_BASE_URL}/gis/zonas-riesgo/`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.features && data.features.length > 0) {
+          L.geoJSON(data, {
+            style: function(feature) {
+              const nivel = (feature.properties?.nivel_riesgo || 'ALTO').toUpperCase();
+              const isHigh = nivel === 'ALTO' || feature.properties?.tipo_evento === 'INUNDACION';
+              return {
+                color: isHigh ? '#E63946' : '#FBBF24',
+                fillColor: isHigh ? '#E63946' : '#FBBF24',
+                fillOpacity: 0.35,
+                weight: 2
+              };
+            }
+          }).addTo(map2);
+        }
+      })
+      .catch(e => console.log('Usando capas base predefinidas en mapa 2:', e));
+
+    // Inicializar Mapa 4 (Ruta Óptima de Evacuación OpenStreetMap)
+    const map4 = L.map('map-phone-4', { zoomControl: false }).setView([0.9710, -79.6550], 14);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map4);
+
+    const route = [
+      [0.9681, -79.6582],
+      [0.9695, -79.6570],
+      [0.9710, -79.6555],
+      [0.9725, -79.6538],
+      [0.9735, -79.6520]
+    ];
+    L.polyline(route, { color: '#38BDF8', weight: 4 }).addTo(map4);
+    L.circleMarker([0.9681, -79.6582], { radius: 6, color: '#00B4D8', fillColor: '#fff', fillOpacity: 1 }).addTo(map4);
+    L.marker([0.9735, -79.6520]).addTo(map4);
+
+    // Conexión en vivo con Albergues PostGIS de Render
+    fetch(`${RENDER_BASE_URL}/evacuacion/albergues/`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.features && data.features.length > 0) {
+          const first = data.features[0];
+          const coords = first.geometry.coordinates;
+          const lat = coords[1];
+          const lon = coords[0];
+          L.marker([lat, lon]).addTo(map4).bindPopup(first.properties.nombre);
+        }
+      })
+      .catch(e => console.log('Albergue por defecto activo:', e));
+  </script>
+</body>
+</html>
