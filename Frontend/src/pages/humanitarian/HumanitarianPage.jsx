@@ -321,23 +321,23 @@ export const HumanitarianPage = () => {
     <div className="max-w-6xl mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
       
       {/* Cabecera y Selector de Pestañas */}
-      <div className="bg-crisis-800 border border-crisis-700 p-4 sm:p-5 rounded-2xl shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-crisis-800 border border-slate-200 dark:border-crisis-700 p-4 sm:p-5 rounded-2xl shadow-sm dark:shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 transition-colors">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30">
               Módulos 4 & 5 • Asistencia Humanitaria
             </span>
             {isAdmin && (
-              <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+              <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30 flex items-center gap-1">
                 <ShieldCheck className="w-3 h-3" /> Modo CRUD Administrador Activo
               </span>
             )}
           </div>
-          <h2 className="text-lg sm:text-2xl font-black text-white flex items-center gap-2.5 mt-1.5">
-            <HeartHandshake className="w-6 h-6 sm:w-7 sm:h-7 text-sky-400 shrink-0" />
+          <h2 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2.5 mt-1.5">
+            <HeartHandshake className="w-6 h-6 sm:w-7 sm:h-7 text-sky-600 dark:text-sky-400 shrink-0" />
             <span>Asistencia Humanitaria, Bodegas y Kits</span>
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
             Gestión de padrón de familias damnificadas, bodegas de acopio y catálogo de provisiones del COE.
           </p>
         </div>
@@ -412,21 +412,21 @@ export const HumanitarianPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <form
             onSubmit={handleSubmitCenso}
-            className="lg:col-span-2 bg-crisis-800 border border-crisis-700 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl"
+            className="lg:col-span-2 bg-white dark:bg-crisis-800 border border-slate-200 dark:border-crisis-700 rounded-2xl p-5 sm:p-6 space-y-4 shadow-sm dark:shadow-xl transition-colors"
           >
-            <div className="flex items-center justify-between border-b border-crisis-700 pb-2.5">
-              <span className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-crisis-700 pb-2.5">
+              <span className="text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
                 {!canRegisterCenso && <Lock className="w-3.5 h-3.5 text-slate-400" />}
                 <span>Nueva Ficha Familiar Damnificada</span>
               </span>
-              <span className="text-xs font-mono text-slate-400">
+              <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
                 {nuevoCenso.codigo_censo}
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="text-xs text-slate-300 font-semibold">
+                <label className="text-xs text-slate-700 dark:text-slate-300 font-semibold">
                   Nombre Jefe de Hogar
                 </label>
                 <input
@@ -436,13 +436,13 @@ export const HumanitarianPage = () => {
                   placeholder={canRegisterCenso ? "ej: María Elena Bone" : "Modo consulta (Digitalizador / Admin)"}
                   value={nuevoCenso.jefe_familia_nombre}
                   onChange={(e) => setNuevoCenso({ ...nuevoCenso, jefe_familia_nombre: e.target.value })}
-                  className={`w-full mt-1 bg-crisis-900 border border-crisis-600 rounded-lg px-3 py-2 text-xs text-white ${
+                  className={`w-full mt-1 bg-slate-50 dark:bg-crisis-900 border border-slate-300 dark:border-crisis-600 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-sky-500 transition ${
                     !canRegisterCenso ? 'opacity-60 cursor-not-allowed bg-slate-100 dark:bg-crisis-950' : ''
                   }`}
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-300 font-semibold">
+                <label className="text-xs text-slate-700 dark:text-slate-300 font-semibold">
                   Cédula de Identidad (10 dígitos)
                 </label>
                 <input
@@ -453,7 +453,7 @@ export const HumanitarianPage = () => {
                   placeholder={canRegisterCenso ? "ej: 0801234567" : "Modo consulta (Digitalizador / Admin)"}
                   value={nuevoCenso.jefe_familia_cedula}
                   onChange={(e) => setNuevoCenso({ ...nuevoCenso, jefe_familia_cedula: e.target.value })}
-                  className={`w-full mt-1 bg-crisis-900 border border-crisis-600 rounded-lg px-3 py-2 text-xs text-white ${
+                  className={`w-full mt-1 bg-slate-50 dark:bg-crisis-900 border border-slate-300 dark:border-crisis-600 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-sky-500 transition ${
                     !canRegisterCenso ? 'opacity-60 cursor-not-allowed bg-slate-100 dark:bg-crisis-950' : ''
                   }`}
                 />
@@ -462,7 +462,7 @@ export const HumanitarianPage = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="text-xs text-slate-300 font-semibold">
+                <label className="text-xs text-slate-700 dark:text-slate-300 font-semibold">
                   Teléfono Celular
                 </label>
                 <input
@@ -471,13 +471,13 @@ export const HumanitarianPage = () => {
                   placeholder={canRegisterCenso ? "ej: 0991234567" : "Modo consulta"}
                   value={nuevoCenso.telefono_contacto}
                   onChange={(e) => setNuevoCenso({ ...nuevoCenso, telefono_contacto: e.target.value })}
-                  className={`w-full mt-1 bg-crisis-900 border border-crisis-600 rounded-lg px-3 py-2 text-xs text-white ${
+                  className={`w-full mt-1 bg-slate-50 dark:bg-crisis-900 border border-slate-300 dark:border-crisis-600 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-sky-500 transition ${
                     !canRegisterCenso ? 'opacity-60 cursor-not-allowed bg-slate-100 dark:bg-crisis-950' : ''
                   }`}
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-300 font-semibold">
+                <label className="text-xs text-slate-700 dark:text-slate-300 font-semibold">
                   Barrio o Sector
                 </label>
                 <input
@@ -485,7 +485,7 @@ export const HumanitarianPage = () => {
                   disabled={!canRegisterCenso}
                   value={nuevoCenso.barrio_sector}
                   onChange={(e) => setNuevoCenso({ ...nuevoCenso, barrio_sector: e.target.value })}
-                  className={`w-full mt-1 bg-crisis-900 border border-crisis-600 rounded-lg px-3 py-2 text-xs text-white ${
+                  className={`w-full mt-1 bg-slate-50 dark:bg-crisis-900 border border-slate-300 dark:border-crisis-600 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-sky-500 transition ${
                     !canRegisterCenso ? 'opacity-60 cursor-not-allowed bg-slate-100 dark:bg-crisis-950' : ''
                   }`}
                 />
@@ -493,59 +493,59 @@ export const HumanitarianPage = () => {
             </div>
 
             {/* Composición Familiar */}
-            <div className="bg-crisis-900/60 p-3 sm:p-4 rounded-xl border border-crisis-700 space-y-2.5">
-              <span className="text-xs font-bold text-slate-300">
+            <div className="bg-slate-50 dark:bg-crisis-900/60 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-crisis-700 space-y-2.5 transition-colors">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                 Indicadores de Vulnerabilidad en el Hogar
               </span>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
                 <div>
-                  <label className="text-[11px] text-slate-400">Total Miembros</label>
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Total Miembros</label>
                   <input
                     type="number"
                     min="1"
                     disabled={!canRegisterCenso}
                     value={nuevoCenso.numero_integrantes}
                     onChange={(e) => setNuevoCenso({ ...nuevoCenso, numero_integrantes: Number(e.target.value) })}
-                    className={`w-full mt-1 bg-crisis-800 border border-crisis-600 rounded px-2 py-1.5 text-xs text-center text-white ${
+                    className={`w-full mt-1 bg-white dark:bg-crisis-800 border border-slate-300 dark:border-crisis-600 rounded px-2 py-1.5 text-xs text-center font-bold text-slate-900 dark:text-white shadow-xs focus:outline-none focus:border-sky-500 ${
                       !canRegisterCenso ? 'opacity-60 cursor-not-allowed' : ''
                     }`}
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-slate-400">Niños (&lt;5 años)</label>
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Niños (&lt;5 años)</label>
                   <input
                     type="number"
                     min="0"
                     disabled={!canRegisterCenso}
                     value={nuevoCenso.ninos_menores_5}
                     onChange={(e) => setNuevoCenso({ ...nuevoCenso, ninos_menores_5: Number(e.target.value) })}
-                    className={`w-full mt-1 bg-crisis-800 border border-crisis-600 rounded px-2 py-1.5 text-xs text-center text-white ${
+                    className={`w-full mt-1 bg-white dark:bg-crisis-800 border border-slate-300 dark:border-crisis-600 rounded px-2 py-1.5 text-xs text-center font-bold text-slate-900 dark:text-white shadow-xs focus:outline-none focus:border-sky-500 ${
                       !canRegisterCenso ? 'opacity-60 cursor-not-allowed' : ''
                     }`}
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-slate-400">Adultos Mayores</label>
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Adultos Mayores</label>
                   <input
                     type="number"
                     min="0"
                     disabled={!canRegisterCenso}
                     value={nuevoCenso.adultos_mayores}
                     onChange={(e) => setNuevoCenso({ ...nuevoCenso, adultos_mayores: Number(e.target.value) })}
-                    className={`w-full mt-1 bg-crisis-800 border border-crisis-600 rounded px-2 py-1.5 text-xs text-center text-white ${
+                    className={`w-full mt-1 bg-white dark:bg-crisis-800 border border-slate-300 dark:border-crisis-600 rounded px-2 py-1.5 text-xs text-center font-bold text-slate-900 dark:text-white shadow-xs focus:outline-none focus:border-sky-500 ${
                       !canRegisterCenso ? 'opacity-60 cursor-not-allowed' : ''
                     }`}
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-slate-400">Discapacidad</label>
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Discapacidad</label>
                   <input
                     type="number"
                     min="0"
                     disabled={!canRegisterCenso}
                     value={nuevoCenso.personas_discapacidad}
                     onChange={(e) => setNuevoCenso({ ...nuevoCenso, personas_discapacidad: Number(e.target.value) })}
-                    className={`w-full mt-1 bg-crisis-800 border border-crisis-600 rounded px-2 py-1.5 text-xs text-center text-white ${
+                    className={`w-full mt-1 bg-white dark:bg-crisis-800 border border-slate-300 dark:border-crisis-600 rounded px-2 py-1.5 text-xs text-center font-bold text-slate-900 dark:text-white shadow-xs focus:outline-none focus:border-sky-500 ${
                       !canRegisterCenso ? 'opacity-60 cursor-not-allowed' : ''
                     }`}
                   />
@@ -680,27 +680,27 @@ export const HumanitarianPage = () => {
                           )}
                         </div>
 
-                        <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                        <p className="text-[11px] text-slate-700 dark:text-slate-300 font-medium">
                           📍 {f.barrio_sector || f.parroquia || 'Esmeraldas'} • {f.numero_integrantes} integrantes
                         </p>
 
                         <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1.5 border-t border-slate-200 dark:border-crisis-800 text-[10px]">
                           <div className="flex flex-wrap items-center gap-1.5">
                             {(f.ninos_menores_5 > 0 || f.adultos_mayores > 0 || f.personas_discapacidad > 0) ? (
-                              <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 font-semibold border border-amber-500/30">
+                              <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30 font-semibold">
                                 {f.ninos_menores_5 || 0} niños • {f.adultos_mayores || 0} ad. may. • {f.personas_discapacidad || 0} disc.
                               </span>
                             ) : (
-                              <span className="text-slate-400">Sin vulnerabilidad</span>
+                              <span className="text-slate-500 dark:text-slate-400">Sin vulnerabilidad</span>
                             )}
                             {f.requiere_evacuacion_inmediata && (
-                              <span className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-700 dark:text-red-300 font-bold border border-red-500/30">
+                              <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-800 border border-red-300 dark:bg-red-500/15 dark:text-red-300 font-bold">
                                 Evacuar
                               </span>
                             )}
                           </div>
 
-                          <span className="text-sky-600 dark:text-sky-400 font-semibold group-hover:underline flex items-center gap-0.5 shrink-0">
+                          <span className="text-sky-600 dark:text-sky-400 font-bold group-hover:underline flex items-center gap-0.5 shrink-0">
                             <span>Ver Ficha</span>
                             <ChevronRight className="w-3 h-3" />
                           </span>
@@ -723,13 +723,13 @@ export const HumanitarianPage = () => {
       {/* ========================================================================= */}
       {tab === 'bodegas' && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-crisis-800 border border-crisis-700 p-4 rounded-xl shadow">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white dark:bg-crisis-800 border border-slate-200 dark:border-crisis-700 p-4 rounded-xl shadow-sm dark:shadow transition-colors">
             <div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-amber-400" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                 Red de Bodegas y Centros de Acopio COE
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
                 Almacenes logísticos autorizados para la recepción y despacho de ayuda humanitaria.
               </p>
             </div>
@@ -747,64 +747,64 @@ export const HumanitarianPage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {bodegas.length === 0 ? (
-              <div className="col-span-full text-center py-12 bg-crisis-800 rounded-2xl border border-crisis-700 text-slate-400 text-xs">
+              <div className="col-span-full text-center py-12 bg-white dark:bg-crisis-800 rounded-2xl border border-slate-200 dark:border-crisis-700 text-slate-500 dark:text-slate-400 text-xs">
                 No hay bodegas registradas actualmente.
               </div>
             ) : (
               bodegas.map((bodega) => (
                 <div
                   key={bodega.id}
-                  className="bg-crisis-800 border border-crisis-700 hover:border-slate-500 rounded-xl p-4 sm:p-5 shadow-lg space-y-3 transition flex flex-col justify-between"
+                  className="bg-white dark:bg-crisis-800 border border-slate-200 dark:border-crisis-700 hover:border-sky-400 dark:hover:border-slate-500 rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md space-y-3 transition flex flex-col justify-between"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                         bodega.activo !== false
-                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                          : 'bg-red-500/15 text-red-400 border-red-500/30'
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30'
+                          : 'bg-red-100 text-red-800 border-red-300 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30'
                       }`}>
                         {bodega.activo !== false ? '● Operativa' : '○ Inactiva'}
                       </span>
-                      <span className="text-[10px] font-mono text-slate-400">
+                      <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400">
                         ID: #{bodega.id}
                       </span>
                     </div>
 
-                    <h4 className="text-sm font-bold text-white">
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">
                       {bodega.nombre}
                     </h4>
 
-                    <div className="text-xs text-slate-300 space-y-1">
+                    <div className="text-xs text-slate-700 dark:text-slate-300 space-y-1.5">
                       <p className="flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5 text-sky-400" />
-                        <span className="text-slate-400">Responsable:</span> {bodega.responsable || 'No asignado'}
+                        <Users className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 shrink-0" />
+                        <span className="font-semibold text-slate-600 dark:text-slate-400">Responsable:</span> <span className="text-slate-800 dark:text-slate-200">{bodega.responsable || 'No asignado'}</span>
                       </p>
                       {bodega.telefono && (
                         <p className="flex items-center gap-1.5">
-                          <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-slate-400">Teléfono:</span> {bodega.telefono}
+                          <Phone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span className="font-semibold text-slate-600 dark:text-slate-400">Teléfono:</span> <span className="text-slate-800 dark:text-slate-200">{bodega.telefono}</span>
                         </p>
                       )}
                       <p className="flex items-start gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                        <span className="text-slate-400">Dirección:</span> {bodega.direccion || 'Esmeraldas'}
+                        <MapPin className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                        <span className="font-semibold text-slate-600 dark:text-slate-400">Dirección:</span> <span className="text-slate-800 dark:text-slate-200">{bodega.direccion || 'Esmeraldas'}</span>
                       </p>
                     </div>
                   </div>
 
                   {/* Acciones CRUD si es Gestor o Admin */}
                   {canManageSupplies && (
-                    <div className="pt-3 border-t border-crisis-700/80 flex items-center justify-end gap-2">
+                    <div className="pt-3 border-t border-slate-200 dark:border-crisis-700/80 flex items-center justify-end gap-2">
                       <button
                         onClick={() => handleOpenEditBodega(bodega)}
-                        className="px-2.5 py-1 text-xs text-slate-300 hover:text-white bg-crisis-700 hover:bg-crisis-600 rounded-lg border border-slate-600 flex items-center gap-1 transition"
+                        className="px-2.5 py-1 text-xs font-semibold text-slate-700 hover:text-sky-700 dark:text-slate-300 dark:hover:text-white bg-slate-100 hover:bg-sky-50 dark:bg-crisis-700 dark:hover:bg-crisis-600 rounded-lg border border-slate-300 dark:border-slate-600 flex items-center gap-1 transition shadow-xs"
                       >
-                        <Edit className="w-3 h-3 text-sky-400" />
+                        <Edit className="w-3 h-3 text-sky-600 dark:text-sky-400" />
                         <span>Editar</span>
                       </button>
                       <button
                         onClick={() => handleDeleteBodega(bodega.id)}
-                        className="px-2.5 py-1 text-xs text-red-400 hover:text-white bg-crisis-700 hover:bg-red-600 rounded-lg border border-red-500/30 flex items-center gap-1 transition"
+                        className="px-2.5 py-1 text-xs font-semibold text-red-700 hover:text-white dark:text-red-400 dark:hover:text-white bg-red-50 hover:bg-red-600 dark:bg-crisis-700 dark:hover:bg-red-600 rounded-lg border border-red-200 dark:border-red-500/30 flex items-center gap-1 transition shadow-xs"
                       >
                         <Trash2 className="w-3 h-3" />
                         <span>Eliminar</span>
@@ -823,13 +823,13 @@ export const HumanitarianPage = () => {
       {/* ========================================================================= */}
       {tab === 'suministros' && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-crisis-800 border border-crisis-700 p-4 rounded-xl shadow">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white dark:bg-crisis-800 border border-slate-200 dark:border-crisis-700 p-4 rounded-xl shadow-sm dark:shadow transition-colors">
             <div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Boxes className="w-4 h-4 text-sky-400" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Boxes className="w-4 h-4 text-sky-600 dark:text-sky-400" />
                 Catálogo Oficial de Kits y Provisiones Humanitarias
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
                 Kits estandarizados por el COE Cantonal según directrices del Servicio Nacional de Gestión de Riesgos.
               </p>
             </div>
@@ -849,39 +849,39 @@ export const HumanitarianPage = () => {
             {suministros.map((item) => (
               <div
                 key={item.id}
-                className="bg-crisis-800 border border-crisis-700 hover:border-slate-500 rounded-xl p-4 shadow-lg space-y-3 transition flex flex-col justify-between"
+                className="bg-white dark:bg-crisis-800 border border-slate-200 dark:border-crisis-700 hover:border-sky-400 dark:hover:border-slate-500 rounded-xl p-4 shadow-sm hover:shadow-md space-y-3 transition flex flex-col justify-between"
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded bg-crisis-700 text-sky-400 border border-slate-600">
+                    <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded bg-sky-50 text-sky-800 border border-sky-200 dark:bg-crisis-700 dark:text-sky-400 dark:border-slate-600">
                       {item.codigo_sku}
                     </span>
-                    <span className="text-[10px] uppercase font-bold text-slate-300 bg-crisis-700/80 px-2 py-0.5 rounded border border-slate-600">
+                    <span className="text-[10px] uppercase font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-crisis-700/80 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600">
                       {formatTipoSuministro(item.tipo)}
                     </span>
                   </div>
-                  <h4 className="font-bold text-white text-sm">{item.nombre_suministro}</h4>
-                  <p className="text-xs text-slate-400">{item.descripcion}</p>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm leading-snug">{item.nombre_suministro}</h4>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{item.descripcion}</p>
                 </div>
 
-                <div className="space-y-2 pt-2 border-t border-crisis-700">
-                  <div className="flex justify-between text-xs text-slate-300">
-                    <span>Unidad: {item.unidad_medida}</span>
-                    <span className="font-bold text-sky-300">{item.peso_kg} kg</span>
+                <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-crisis-700">
+                  <div className="flex justify-between text-xs text-slate-700 dark:text-slate-300">
+                    <span>Unidad: <strong className="font-semibold">{item.unidad_medida}</strong></span>
+                    <span className="font-bold text-sky-700 dark:text-sky-300">{item.peso_kg} kg</span>
                   </div>
 
                   {canManageSupplies && (
-                    <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-crisis-700/60">
+                    <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-200 dark:border-crisis-700/60">
                       <button
                         onClick={() => handleOpenEditKit(item)}
-                        className="px-2 py-1 text-[11px] text-slate-300 hover:text-white bg-crisis-700 hover:bg-crisis-600 rounded border border-slate-600 flex items-center gap-1 transition"
+                        className="px-2 py-1 text-[11px] font-semibold text-slate-700 hover:text-sky-700 dark:text-slate-300 dark:hover:text-white bg-slate-100 hover:bg-sky-50 dark:bg-crisis-700 dark:hover:bg-crisis-600 rounded border border-slate-300 dark:border-slate-600 flex items-center gap-1 transition shadow-xs"
                       >
-                        <Edit className="w-3 h-3 text-sky-400" />
+                        <Edit className="w-3 h-3 text-sky-600 dark:text-sky-400" />
                         <span>Editar</span>
                       </button>
                       <button
                         onClick={() => handleDeleteKit(item.id)}
-                        className="px-2 py-1 text-[11px] text-red-400 hover:text-white bg-crisis-700 hover:bg-red-600 rounded border border-red-500/30 flex items-center gap-1 transition"
+                        className="px-2 py-1 text-[11px] font-semibold text-red-700 hover:text-white dark:text-red-400 dark:hover:text-white bg-red-50 hover:bg-red-600 dark:bg-crisis-700 dark:hover:bg-red-600 rounded border border-red-200 dark:border-red-500/30 flex items-center gap-1 transition shadow-xs"
                       >
                         <Trash2 className="w-3 h-3" />
                         <span>Eliminar</span>
@@ -900,15 +900,15 @@ export const HumanitarianPage = () => {
       {/* ========================================================================= */}
       {showBodegaModal && (
         <div className="fixed inset-0 z-[1500] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-amber-400" />
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto transition-colors">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                 {editingBodega ? 'Editar Bodega de Acopio' : 'Registrar Nueva Bodega'}
               </h3>
               <button
                 onClick={() => setShowBodegaModal(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded transition"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -916,70 +916,70 @@ export const HumanitarianPage = () => {
 
             <form onSubmit={handleSaveBodega} className="space-y-3 text-xs">
               <div>
-                <label className="text-slate-300 font-semibold">Nombre de la Bodega</label>
+                <label className="text-slate-700 dark:text-slate-300 font-semibold">Nombre de la Bodega</label>
                 <input
                   type="text"
                   required
                   placeholder="ej: Bodega Central COE - San Rafael"
                   value={bodegaForm.nombre}
                   onChange={(e) => setBodegaForm({ ...bodegaForm, nombre: e.target.value })}
-                  className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                  className="w-full mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-sky-500"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-300 font-semibold">Responsable Encargado</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-semibold">Responsable Encargado</label>
                   <input
                     type="text"
                     placeholder="ej: Ing. Marcos Quintero"
                     value={bodegaForm.responsable}
                     onChange={(e) => setBodegaForm({ ...bodegaForm, responsable: e.target.value })}
-                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                    className="w-full mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-sky-500"
                   />
                 </div>
                 <div>
-                  <label className="text-slate-300 font-semibold">Teléfono Celular</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-semibold">Teléfono Celular</label>
                   <input
                     type="text"
                     placeholder="ej: 0991234567"
                     value={bodegaForm.telefono}
                     onChange={(e) => setBodegaForm({ ...bodegaForm, telefono: e.target.value })}
-                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                    className="w-full mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-sky-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-slate-300 font-semibold">Dirección / Referencia</label>
+                <label className="text-slate-700 dark:text-slate-300 font-semibold">Dirección / Referencia</label>
                 <input
                   type="text"
                   placeholder="ej: Av. Kennedy y Olmedo"
                   value={bodegaForm.direccion}
                   onChange={(e) => setBodegaForm({ ...bodegaForm, direccion: e.target.value })}
-                  className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                  className="w-full mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-sky-500"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-300 font-semibold">Latitud GPS</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-semibold">Latitud GPS</label>
                   <input
                     type="number"
                     step="0.0001"
                     value={bodegaForm.lat}
                     onChange={(e) => setBodegaForm({ ...bodegaForm, lat: parseFloat(e.target.value) || 0 })}
-                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                    className="w-full mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-sky-500"
                   />
                 </div>
                 <div>
-                  <label className="text-slate-300 font-semibold">Longitud GPS</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-semibold">Longitud GPS</label>
                   <input
                     type="number"
                     step="0.0001"
                     value={bodegaForm.lon}
                     onChange={(e) => setBodegaForm({ ...bodegaForm, lon: parseFloat(e.target.value) || 0 })}
-                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                    className="w-full mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-sky-500"
                   />
                 </div>
               </div>
@@ -990,24 +990,24 @@ export const HumanitarianPage = () => {
                   id="activoBodega"
                   checked={bodegaForm.activo}
                   onChange={(e) => setBodegaForm({ ...bodegaForm, activo: e.target.checked })}
-                  className="rounded text-amber-500"
+                  className="rounded text-amber-500 focus:ring-amber-400"
                 />
-                <label htmlFor="activoBodega" className="text-slate-300 cursor-pointer">
+                <label htmlFor="activoBodega" className="text-slate-700 dark:text-slate-300 font-medium cursor-pointer">
                   Bodega operativa para despacho inmediato
                 </label>
               </div>
 
-              <div className="pt-2 flex justify-end gap-2 border-t border-slate-800">
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowBodegaModal(false)}
-                  className="px-3 py-1.5 bg-slate-800 text-slate-300 hover:text-white rounded-lg"
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg border border-slate-300 dark:border-slate-700 transition"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg shadow"
+                  className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg shadow transition"
                 >
                   {editingBodega ? 'Guardar Cambios' : 'Crear Bodega'}
                 </button>
@@ -1022,15 +1022,15 @@ export const HumanitarianPage = () => {
       {/* ========================================================================= */}
       {showKitModal && (
         <div className="fixed inset-0 z-[1500] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Boxes className="w-4 h-4 text-sky-400" />
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto transition-colors">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Boxes className="w-4 h-4 text-sky-600 dark:text-sky-400" />
                 {editingKit ? 'Editar Suministro / Provisión' : 'Registrar Nuevo Suministro / Provisión'}
               </h3>
               <button
                 onClick={() => setShowKitModal(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded transition"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1039,22 +1039,22 @@ export const HumanitarianPage = () => {
             <form onSubmit={handleSaveKit} className="space-y-3 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-300 font-semibold">Código SKU / Identificador</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-semibold">Código SKU / Identificador</label>
                   <input
                     type="text"
                     required
                     placeholder="ej: UNT-919, KIT-ALIM-3D"
                     value={kitForm.codigo_sku}
                     onChange={(e) => setKitForm({ ...kitForm, codigo_sku: e.target.value })}
-                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs font-mono"
+                    className="w-full mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white text-xs font-mono focus:outline-none focus:border-sky-500"
                   />
                 </div>
                 <div>
-                  <label className="text-slate-300 font-semibold">Tipo de Suministro</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-semibold">Tipo de Suministro</label>
                   <select
                     value={kitForm.tipo}
                     onChange={(e) => setKitForm({ ...kitForm, tipo: e.target.value })}
-                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                    className="w-full mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-sky-500"
                   >
                     <option value="COLCHON_COBIJA">Colchones, Frazadas y Refugio</option>
                     <option value="ALIMENTO">Alimentos y Raciones</option>
@@ -1067,24 +1067,24 @@ export const HumanitarianPage = () => {
               </div>
 
               <div>
-                <label className="text-slate-300 font-semibold">Nombre del Suministro / Insumo</label>
+                <label className="text-slate-700 dark:text-slate-300 font-semibold">Nombre del Suministro / Insumo</label>
                 <input
                   type="text"
                   required
                   placeholder="ej: Colchones de Espuma, Kit de Alimentos, Bidón de Agua"
                   value={kitForm.nombre_suministro}
                   onChange={(e) => setKitForm({ ...kitForm, nombre_suministro: e.target.value })}
-                  className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                  className="w-full mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-sky-500"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-300 font-semibold">Unidad de Medida</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-semibold">Unidad de Medida</label>
                   <select
                     value={kitForm.unidad_medida}
                     onChange={(e) => setKitForm({ ...kitForm, unidad_medida: e.target.value })}
-                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs font-bold"
+                    className="w-full mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white text-xs font-bold focus:outline-none focus:border-sky-500"
                   >
                     <option value="UNIDAD">UNIDAD (Colchón, frazada, linterna, etc.)</option>
                     <option value="KIT">KIT (Kit familiar, kit de aseo, etc.)</option>
@@ -1097,40 +1097,40 @@ export const HumanitarianPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-slate-300 font-semibold">Peso Aproximado (kg)</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-semibold">Peso Aproximado (kg)</label>
                   <input
                     type="number"
                     step="0.1"
                     min="0"
                     value={kitForm.peso_kg}
                     onChange={(e) => setKitForm({ ...kitForm, peso_kg: parseFloat(e.target.value) || 0 })}
-                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                    className="w-full mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-sky-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-slate-300 font-semibold">Descripción y Detalle del Suministro</label>
+                <label className="text-slate-700 dark:text-slate-300 font-semibold">Descripción y Detalle del Suministro</label>
                 <textarea
                   rows="2"
                   placeholder="Detalle de provisiones o características técnicas..."
                   value={kitForm.descripcion}
                   onChange={(e) => setKitForm({ ...kitForm, descripcion: e.target.value })}
-                  className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                  className="w-full mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-sky-500"
                 />
               </div>
 
-              <div className="pt-2 flex justify-end gap-2 border-t border-slate-800">
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowKitModal(false)}
-                  className="px-3 py-1.5 bg-slate-800 text-slate-300 hover:text-white rounded-lg"
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg border border-slate-300 dark:border-slate-700 transition"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-lg shadow"
+                  className="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-lg shadow transition"
                 >
                   {editingKit ? 'Guardar Cambios' : 'Crear Suministro'}
                 </button>
