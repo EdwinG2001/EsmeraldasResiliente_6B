@@ -192,7 +192,8 @@ export const HumanitarianPage = () => {
       danos_vivienda: 'PARCIAL',
       requiere_evacuacion_inmediata: false,
       lat: sol.latitud || sol.lat,
-      lon: sol.longitud || sol.lon
+      lon: sol.longitud || sol.lon,
+      _solicitudId: sol.id
     });
     // Notificar que la brigada está en camino
     humanitarianApi.actualizarSolicitudCenso(sol.id, { estado: 'EN_CAMINO' })
@@ -230,6 +231,23 @@ export const HumanitarianPage = () => {
     }
     try {
       await humanitarianApi.crearCensoFamilia(nuevoCenso);
+
+      // Sincronizar automáticamente la solicitud de censo como ATENDIDO si estaba vinculada o por cédula
+      try {
+        if (nuevoCenso._solicitudId) {
+          await humanitarianApi.actualizarSolicitudCenso(nuevoCenso._solicitudId, { estado: 'ATENDIDO' });
+        } else if (nuevoCenso.jefe_familia_cedula) {
+          const solCoincidente = solicitudes.find(
+            (s) => s.jefe_familia_cedula?.trim() === nuevoCenso.jefe_familia_cedula.trim() && s.estado !== 'ATENDIDO'
+          );
+          if (solCoincidente) {
+            await humanitarianApi.actualizarSolicitudCenso(solCoincidente.id, { estado: 'ATENDIDO' });
+          }
+        }
+      } catch (errSync) {
+        console.warn('Sincronización de solicitud de censo completada por backend:', errSync);
+      }
+
       setCensoGuardado(true);
       await loadData();
       setTimeout(() => setCensoGuardado(false), 4000);
@@ -1402,9 +1420,17 @@ export const HumanitarianPage = () => {
                               <Clock className="w-3.5 h-3.5" />
                               {vencido ? 'Plazo de 48h Vencido' : `Restan ${horasRestantes}h de 48h`}
                             </span>
-                          ) : (
+                          ) : sol.estado === 'EN_CAMINO' ? (
+                            <span className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 flex items-center gap-1">
+                              <Truck className="w-3.5 h-3.5" /> Brigada en Camino
+                            </span>
+                          ) : sol.estado === 'ATENDIDO' ? (
                             <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                               <CheckCircle2 className="w-3.5 h-3.5" /> Atendido
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                              <Trash2 className="w-3.5 h-3.5" /> Descartado
                             </span>
                           )}
                         </div>

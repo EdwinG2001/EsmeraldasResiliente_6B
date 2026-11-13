@@ -36,7 +36,16 @@ class FamiliasCensoListCreateAPIView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user if self.request.user.is_authenticated else None
-        serializer.save(censador=user)
+        familia = serializer.save(censador=user)
+        # Sincronizar automáticamente cualquier SolicitudCenso previa con la misma cédula
+        if familia.jefe_familia_cedula:
+            SolicitudCenso.objects.filter(
+                jefe_familia_cedula=familia.jefe_familia_cedula.strip()
+            ).exclude(estado='ATENDIDO').update(
+                estado='ATENDIDO',
+                atendido_por=user,
+                fecha_atencion=timezone.now()
+            )
 
 class VerificarCensoCiudadanoAPIView(APIView):
     """
@@ -160,6 +169,16 @@ class SolicitudesCensoListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
+        # Auto-sincronizar solicitudes cuyas familias ya constan en el padrón censal
+        cedulas_censadas = FamiliaCenso.objects.values_list('jefe_familia_cedula', flat=True)
+        if cedulas_censadas.exists():
+            SolicitudCenso.objects.filter(
+                jefe_familia_cedula__in=cedulas_censadas
+            ).exclude(estado='ATENDIDO').update(
+                estado='ATENDIDO',
+                fecha_atencion=timezone.now()
+            )
+
         qs = SolicitudCenso.objects.all().order_by('-fecha_solicitud')
         
         # Filtros opcionales
@@ -179,7 +198,12 @@ class SolicitudesCensoListCreateAPIView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user if self.request.user.is_authenticated else None
-        serializer.save(usuario=user)
+        solicitud = serializer.save(usuario=user)
+        # Si la cédula ya consta censada previamente en el padrón, marcar inmediatamente como ATENDIDO
+        if solicitud.jefe_familia_cedula and FamiliaCenso.objects.filter(jefe_familia_cedula=solicitud.jefe_familia_cedula.strip()).exists():
+            solicitud.estado = 'ATENDIDO'
+            solicitud.fecha_atencion = timezone.now()
+            solicitud.save(update_fields=['estado', 'fecha_atencion'])
 
 class SolicitudCensoDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     """
