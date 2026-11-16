@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Lock, Phone, ArrowRight, ArrowLeft, AlertCircle, Key, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { apiClient } from '../../api/client';
 
 export const LoginPage = () => {
   const { login, loginWithKeycloakToken, isAuthenticated } = useAuth();
@@ -102,10 +103,27 @@ export const LoginPage = () => {
     }
   };
 
-  const handleKeycloakLogin = () => {
-    const kcBaseUrl = 'https://innocent-arrivals-sec-penetration.trycloudflare.com';
-    const realm = 'esmeraldas-resiliente';
-    const clientId = 'frontend-web';
+  const handleKeycloakLogin = async () => {
+    setLoading(true);
+    let kcBaseUrl = 'https://responses-bios-grew-musician.trycloudflare.com';
+    let realm = 'esmeraldas-resiliente';
+    let clientId = 'frontend-web';
+
+    try {
+      const res = await apiClient.get('/auth/keycloak-config/');
+      if (res.data?.keycloak_url) {
+        kcBaseUrl = res.data.keycloak_url;
+      }
+      if (res.data?.realm) {
+        realm = res.data.realm;
+      }
+      if (res.data?.client_id) {
+        clientId = res.data.client_id;
+      }
+    } catch (e) {
+      console.warn('Fallback a URL predeterminada de Keycloak:', e);
+    }
+
     const redirectUri = window.location.origin + '/login';
     const authUrl = `${kcBaseUrl}/realms/${realm}/protocol/openid-connect/auth?client_id=${clientId}&response_type=token&scope=openid%20profile%20email&prompt=login&redirect_uri=${encodeURIComponent(
       redirectUri

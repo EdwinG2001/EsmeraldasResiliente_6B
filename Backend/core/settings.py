@@ -174,7 +174,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ------------------------------------------------------------------------------
 _kc_env = os.getenv('KEYCLOAK_URL', '').strip()
 if not _kc_env or 'onrender.com' in _kc_env:
-    KEYCLOAK_URL = 'https://innocent-arrivals-sec-penetration.trycloudflare.com'
+    KEYCLOAK_URL = 'https://responses-bios-grew-musician.trycloudflare.com'
 else:
     KEYCLOAK_URL = _kc_env.rstrip('/')
 KEYCLOAK_REALM = os.getenv('KEYCLOAK_REALM', 'esmeraldas-resiliente')

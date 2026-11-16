@@ -45,11 +45,37 @@ class AuthService {
     }
   }
 
+  /// Sincroniza dinámicamente la URL activa de Keycloak desde el backend en Render
+  Future<void> syncKeycloakConfig() async {
+    try {
+      final response = await _client.dio.get(
+        ApiConstants.keycloakConfigUrl,
+        options: Options(
+          sendTimeout: const Duration(seconds: 4),
+          receiveTimeout: const Duration(seconds: 4),
+        ),
+      );
+      if (response.statusCode == 200 && response.data is Map) {
+        final data = response.data as Map;
+        ApiConstants.updateKeycloakConfig(
+          url: data['keycloak_url']?.toString(),
+          realm: data['realm']?.toString(),
+          clientId: data['client_id']?.toString(),
+        );
+      }
+    } catch (_) {
+      // Si el backend tarda o está offline, se preserva el fallback configurado
+    }
+  }
+
   /// Autenticación institucional con Keycloak IAM (Single Sign-On para Censadores / Digitalizadores)
   Future<UserModel> loginKeycloak({
     required String username,
     required String password,
   }) async {
+    // Sincronizar dinámicamente la URL activa de Keycloak desde el Backend en Render
+    await syncKeycloakConfig();
+
     final dio = Dio(BaseOptions(
       connectTimeout: const Duration(seconds: 8),
       receiveTimeout: const Duration(seconds: 8),

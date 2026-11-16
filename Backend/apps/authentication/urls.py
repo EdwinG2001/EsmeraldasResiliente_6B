@@ -3,10 +3,13 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     RegistroCiudadanoAPIView, 
     PerfilUsuarioAPIView,
-    CustomTokenObtainPairView
+    CustomTokenObtainPairView,
+    KeycloakConfigAPIView
 )
 
 urlpatterns = [
+    # Configuración dinámica de Keycloak para Web y Móvil (Service Discovery)
+    path('keycloak-config/', KeycloakConfigAPIView.as_view(), name='auth-keycloak-config'),
     # Registro rápido desde móvil
     path('registro/', RegistroCiudadanoAPIView.as_view(), name='auth-registro'),
     # Login JWT (recibe 'username'/'admin'/'telefono' y 'password')

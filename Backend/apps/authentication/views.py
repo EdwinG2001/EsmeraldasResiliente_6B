@@ -1,5 +1,7 @@
+from django.conf import settings
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import Usuario
@@ -8,6 +10,28 @@ from .serializers import (
     PerfilUsuarioSerializer,
     CustomTokenObtainPairSerializer
 )
+
+class KeycloakConfigAPIView(APIView):
+    """
+    Retorna la configuración activa de Keycloak IAM (URL de Cloudflare, Realm y Clientes).
+    Permite a la Web y a la App Móvil sincronizar dinámicamente la URL de Keycloak
+    sin requerir recompilación de clientes ni cambios de código cuando el túnel se renueva.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        kc_url = getattr(settings, 'KEYCLOAK_URL', '').rstrip('/')
+        realm = getattr(settings, 'KEYCLOAK_REALM', 'esmeraldas-resiliente')
+        client_id = 'frontend-web'
+        return Response({
+            'keycloak_url': kc_url,
+            'realm': realm,
+            'client_id': client_id,
+            'auth_url': f"{kc_url}/realms/{realm}/protocol/openid-connect/auth",
+            'token_url': f"{kc_url}/realms/{realm}/protocol/openid-connect/token",
+            'userinfo_url': f"{kc_url}/realms/{realm}/protocol/openid-connect/userinfo",
+            'jwks_url': f"{kc_url}/realms/{realm}/protocol/openid-connect/certs",
+        }, status=status.HTTP_200_OK)
 
 class CustomTokenObtainPairView(generics.GenericAPIView):
     """

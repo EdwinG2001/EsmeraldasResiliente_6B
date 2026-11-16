@@ -16,11 +16,28 @@ class ApiConstants {
   static const String perfil = '/auth/perfil/';
 
   // Keycloak IAM (Single Sign-On para Censadores y Operativos)
-  static const String keycloakBaseUrl = 'https://innocent-arrivals-sec-penetration.trycloudflare.com';
-  static const String keycloakRealm = 'esmeraldas-resiliente';
-  static const String keycloakClientId = 'frontend-web';
-  static const String keycloakTokenUrl = '$keycloakBaseUrl/realms/$keycloakRealm/protocol/openid-connect/token';
-  static const String keycloakUserInfoUrl = '$keycloakBaseUrl/realms/$keycloakRealm/protocol/openid-connect/userinfo';
+  // Sincronizado dinámicamente desde el backend en Render vía /auth/keycloak-config/
+  static const String defaultKeycloakBaseUrl = 'https://responses-bios-grew-musician.trycloudflare.com';
+  static String keycloakBaseUrl = defaultKeycloakBaseUrl;
+  static String keycloakRealm = 'esmeraldas-resiliente';
+  static String keycloakClientId = 'frontend-web';
+
+  static String get keycloakTokenUrl => '$keycloakBaseUrl/realms/$keycloakRealm/protocol/openid-connect/token';
+  static String get keycloakUserInfoUrl => '$keycloakBaseUrl/realms/$keycloakRealm/protocol/openid-connect/userinfo';
+  static const String keycloakConfigUrl = '/auth/keycloak-config/';
+
+  static void updateKeycloakConfig({String? url, String? realm, String? clientId}) {
+    if (url != null && url.trim().isNotEmpty) {
+      final cleanUrl = url.trim().endsWith('/') ? url.trim().substring(0, url.trim().length - 1) : url.trim();
+      keycloakBaseUrl = cleanUrl;
+    }
+    if (realm != null && realm.trim().isNotEmpty) {
+      keycloakRealm = realm.trim();
+    }
+    if (clientId != null && clientId.trim().isNotEmpty) {
+      keycloakClientId = clientId.trim();
+    }
+  }
 
   // Asistencia Humanitaria y Censo (Tabla: familias_censo)
   static const String censoFamilias = '/humanitaria/censo-familias/';
